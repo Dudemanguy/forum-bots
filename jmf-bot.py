@@ -1,7 +1,9 @@
+import argparse
 import getpass
 import http.cookiejar
 import mechanize
 import os
+import random
 import re
 import socket
 import sys
@@ -56,6 +58,7 @@ def update_info(soup):
     poster = []
     thread = []
     time = []
+    url = []
     poster_names = soup.find_all("span", class_="smalltext")
     thread_names = soup.find_all("a", {"id" : re.compile("tid_.*")})
     for i in range(len(poster_names)-1, -1, -1):
@@ -66,11 +69,15 @@ def update_info(soup):
     for i in range(len(poster_names)-1, -1, -1):
         if poster_names[i].span != None and str(poster_names[i].a).find("search") == -1:
             time.append(poster_names[i].contents[2][2:])
+    for i in range(len(poster_names)-1, -1, -1):
+        if poster_names[i].span != None and str(poster_names[i].a).find("search") == -1:
+            ending = poster_names[i].a['href']
+            url.append(baseurl+ending)
     for i in range(len(thread_names)-1, -1, -1):
         thread.append(thread_names[i].contents[0])
     full = []
     for i in range(len(poster)):
-        full.append([poster[i], thread[i], time[i]])
+        full.append([poster[i], thread[i], time[i], url[i]])
     return full
 
 def exists_in_old(item, old_full):
@@ -79,6 +86,7 @@ def exists_in_old(item, old_full):
             return True
     return False
 
+baseurl = "https://japanesemetalforum.com/"
 loginurl = "https://japanesemetalforum.com/member.php?action=login"
 cj = http.cookiejar.CookieJar()
 
@@ -121,6 +129,7 @@ while True:
     for i in range(0, len(full)):
         if not exists_in_old(full[i], old_full):
             irc.send(channel, "[JMF_Bot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
+            irc.send(channel, full[i][3])
             time.sleep(1)
     old_full = full
     time.sleep(60)
