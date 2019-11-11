@@ -109,6 +109,7 @@ botnick = "JMFbot"
 irc = IRC()
 irc.server_connect(server, port, botnick)
 in_channel = False
+first_join = True
 old_full = []
 
 while True:
@@ -123,9 +124,11 @@ while True:
         in_channel = True
 
     for i in range(0, len(full)):
-        if not exists_in_old(full[i], old_full):
+        if not exists_in_old(full[i], old_full) and not first_join:
             irc.send(channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
             irc.send(channel, full[i][3])
             time.sleep(1)
+    if first_join:
+        first_join = False
     old_full = full
     time.sleep(60)
