@@ -74,7 +74,7 @@ def update_info(soup):
             time.append(poster_names[i].contents[2][2:])
     for i in range(len(thread_names)-1, -1, -1):
         thread_id = thread_names[i].get('id')[4:]
-        url.append(baseurl+thread_id)
+        url.append(baseurl+thread_id+"&action=lastpost")
     full = []
     for i in range(len(poster)):
         full.append([poster[i], thread[i], time[i], url[i]])
