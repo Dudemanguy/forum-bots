@@ -33,18 +33,22 @@ def execute_command(irc, channel, substring, user):
         msg_send(irc, channel, arguments)
         return 0
     if substring[:4] == "quit":
-        if user[len(user) - 1] == "!":
-            msg_send(irc, channel, "bbl")
-            irc.shutdown()
-            irc.close()
-            return 1
-        else:
-            msg_send(irc, channel, "Only channel OPs can kill me.")
-            return 0
+        irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
+        names = get_response(irc)
+        names = names.split()
+        for i in names:
+            if i[0] == "@" and user == i[1:]:
+                msg_send(irc, channel, "bbl")
+                irc.shutdown(2)
+                irc.close()
+                return 1
+        msg_send(irc, channel, "Only channel ops can kill me.")
+        return 0
 
 def check_for_command(irc, channel, text):
     if text.find('.JMFbot ') != -1:
         user = text.split("~")[0][1:]
+        user = user[:len(user)-1]
         substring = text.split(".JMFbot ")[1]
         ret = execute_command(irc, channel, substring, user)
         return ret
