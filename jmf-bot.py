@@ -1,9 +1,7 @@
-import argparse
 import getpass
 import http.cookiejar
 import mechanize
 import os
-import random
 import re
 import socket
 import sys
