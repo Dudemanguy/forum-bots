@@ -3,46 +3,47 @@ import http.cookiejar
 import mechanize
 import re
 import socket
+import ssl
 import time
 from bs4 import BeautifulSoup
 
-class IRC:
+def channel_join(irc, channel, botpass):
+    time.sleep(1)
+    irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
+    return True
  
-    irc = socket.socket()
-  
-    def __init__(self):
-        # Define the socket
-        self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def channel_join(self, channel):
-        self.irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
+def msg_send(irc, channel, msg):
+    # Transfer data
+    irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
  
-    def send(self, channel, msg):
-        # Transfer data
-        self.irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
+def server_connect(irc, server, port, botnick):
+    # Connect to the server
+    print("Connecting to: " + server)
+    irc.connect((server, port))
+
+    # Perform user authentication
+    irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
+    irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
+    time.sleep(5)
+
+def get_response(irc):
+    time.sleep(1)
+    # Get the response
+    resp = irc.recv(2040).decode("UTF-8")
  
-    def server_connect(self, server, port, botnick):
-        # Connect to the server
-        print("Connecting to: " + server)
-        self.irc.connect((server, port))
+    return resp
 
-        # Perform user authentication
-        self.irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
-        self.irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
-        time.sleep(5)
+def identify_name(irc, resp, botpass):
+    if resp.find('PING') != -1:
+        irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+botpass+"\r\n", "UTF-8"))
+        return True
+    return False
 
-    def get_response(self):
-        time.sleep(1)
-        # Get the response
-        resp = self.irc.recv(2040).decode("UTF-8")
- 
-        return resp
-
-    def reply_pong(self, resp):
-        if resp.find('PING') != -1:                      
-            for i in range(len(resp.split())):
-                if resp.split()[i] == "PING":
-                    self.irc.send(bytes('PONG '+resp.split()[i+1]+'\r\n', "UTF-8"))
+def reply_pong(irc, resp, botpass):
+    if resp.find('PING') != -1:                      
+        for i in range(len(resp.split())):
+            if resp.split()[i] == "PING":
+                irc.send(bytes('PONG '+resp.split()[i+1]+'\r\n', "UTF-8"))
 
 def get_new_html():
     searchurl = "https://japanesemetalforum.com/search.php?action=getdaily"
@@ -100,35 +101,42 @@ br.open(loginurl)
 br.select_form(nr=1)
 br.form['username'] = input("Username: ")
 br.form['password'] = getpass.getpass("Password: ")
+botpass = br.form['password']
 br.submit()
 
 server = "irc.rizon.net"
-port = 6667
+port = 6697
 channel = "#jpmetal"
 botnick = "JMFbot"
-irc = IRC()
-irc.server_connect(server, port, botnick)
+irc = socket.socket()
+irc.settimeout(300)
+irc = ssl.wrap_socket(irc)
+
+server_connect(irc, server, port, botnick)
 in_channel = False
 first_join = True
+identified = False
 old_full = []
 
 while True:
     soup = get_new_html()
     full = update_info(soup)
-    text = irc.get_response()
+    text = get_response(irc)
     print(text)
  
-    irc.reply_pong(text)
-    if not in_channel:
-        irc.channel_join(channel)
-        in_channel = True
+    reply_pong(irc, text, botpass)
+    if not identified:
+        identified = identify_name(irc, text, botpass)
+    if not in_channel and identified:
+        in_channel = channel_join(irc, channel, botpass)
 
-    for i in range(0, len(full)):
-        if not exists_in_old(full[i], old_full) and not first_join:
-            irc.send(channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
-            irc.send(channel, full[i][3])
-            time.sleep(1)
-    if first_join:
-        first_join = False
-    old_full = full
-    time.sleep(60)
+    if in_channel and identified:
+        for i in range(0, len(full)):
+            if not exists_in_old(full[i], old_full) and not first_join:
+                msg_send(irc, channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
+                msg_send(irc, channel, full[i][3])
+                time.sleep(1)
+        if first_join:
+            first_join = False
+        old_full = full
+        time.sleep(60)
