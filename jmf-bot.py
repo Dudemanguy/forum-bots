@@ -7,7 +7,7 @@ import ssl
 import time
 from bs4 import BeautifulSoup
 
-def channel_join(irc, channel, botpass):
+def channel_join(irc, channel):
     time.sleep(1)
     irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
     return True
@@ -29,7 +29,7 @@ def server_connect(irc, server, port, botnick):
 def get_response(irc):
     time.sleep(1)
     # Get the response
-    resp = irc.recv(2040).decode("UTF-8")
+    resp = irc.recv(4096).decode("UTF-8")
  
     return resp
 
@@ -39,7 +39,7 @@ def identify_name(irc, resp, botpass):
         return True
     return False
 
-def reply_pong(irc, resp, botpass):
+def reply_pong(irc, resp):
     if resp.find('PING') != -1:                      
         for i in range(len(resp.split())):
             if resp.split()[i] == "PING":
@@ -109,34 +109,46 @@ port = 6697
 channel = "#jpmetal"
 botnick = "JMFbot"
 irc = socket.socket()
-irc.settimeout(300)
 irc = ssl.wrap_socket(irc)
 
 server_connect(irc, server, port, botnick)
 in_channel = False
 first_join = True
 identified = False
+init_server_message = False
 old_full = []
+old_time = 0
 
 while True:
-    soup = get_new_html()
-    full = update_info(soup)
     text = get_response(irc)
     print(text)
- 
-    reply_pong(irc, text, botpass)
+    elapsed_time = time.time() - old_time
+
+    reply_pong(irc, text)
+
     if not identified:
         identified = identify_name(irc, text, botpass)
-    if not in_channel and identified:
-        in_channel = channel_join(irc, channel, botpass)
 
-    if in_channel and identified:
+    if not init_server_message:
+        if text.find('+r') != -1:                      
+            init_server_message = True
+        continue
+
+    if not in_channel and identified and init_server_message:
+        in_channel = channel_join(irc, channel)
+
+    if in_channel and elapsed_time > 60:
+        soup = get_new_html()
+        full = update_info(soup)
         for i in range(0, len(full)):
             if not exists_in_old(full[i], old_full) and not first_join:
                 msg_send(irc, channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
                 msg_send(irc, channel, full[i][3])
                 time.sleep(1)
         if first_join:
+            msg_send(irc, channel, "hi")
             first_join = False
         old_full = full
-        time.sleep(60)
+        old_time = time.time()
+
+    time.sleep(5)
