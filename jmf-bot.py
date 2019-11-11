@@ -14,6 +14,11 @@ def channel_join(irc, channel):
  
 def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
+
+def get_response(irc):
+    time.sleep(1)
+    resp = irc.recv(4096).decode("UTF-8")
+    return resp
  
 def server_connect(irc, server, port, botnick):
     print("Connecting to: " + server)
@@ -22,20 +27,27 @@ def server_connect(irc, server, port, botnick):
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
     time.sleep(5)
 
-def execute_command(irc, channel, substring):
+def execute_command(irc, channel, substring, user):
     if substring[:5] == "echo ":
         arguments = substring.split("echo ")[1]
         msg_send(irc, channel, arguments)
+        return 0
+    if substring[:4] == "quit":
+        if user[len(user) - 1] == "!":
+            msg_send(irc, channel, "bbl")
+            irc.shutdown()
+            irc.close()
+            return 1
+        else:
+            msg_send(irc, channel, "Only channel OPs can kill me.")
+            return 0
 
 def check_for_command(irc, channel, text):
     if text.find('.JMFbot ') != -1:
+        user = text.split("~")[0][1:]
         substring = text.split(".JMFbot ")[1]
-        execute_command(irc, channel, substring)
-
-def get_response(irc):
-    time.sleep(1)
-    resp = irc.recv(4096).decode("UTF-8")
-    return resp
+        ret = execute_command(irc, channel, substring, user)
+        return ret
 
 def identify_name(irc, text, botpass):
     if text.find('PING') != -1:
@@ -140,7 +152,9 @@ while True:
     if not in_channel and identified and init_server_message:
         in_channel = channel_join(irc, channel)
 
-    check_for_command(irc, channel, text)
+    ret = check_for_command(irc, channel, text)
+    if ret == 1:
+        break
 
     if in_channel and elapsed_time > 60:
         soup = get_new_html()
