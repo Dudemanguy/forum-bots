@@ -67,15 +67,14 @@ def update_info(soup):
             if str(poster_names[i].a).find("search") > -1:
                 continue
             poster.append(poster_names[i].strong.contents[0])
+    for i in range(len(thread_names)-1, -1, -1):
+        thread.append(thread_names[i].contents[0])
     for i in range(len(poster_names)-1, -1, -1):
         if poster_names[i].span != None and str(poster_names[i].a).find("search") == -1:
             time.append(poster_names[i].contents[2][2:])
-    for i in range(len(poster_names)-1, -1, -1):
-        if poster_names[i].span != None and str(poster_names[i].a).find("search") == -1:
-            ending = poster_names[i].a['href']
-            url.append(baseurl+ending)
     for i in range(len(thread_names)-1, -1, -1):
-        thread.append(thread_names[i].contents[0])
+        thread_id = thread_names[i].get('id')[4:]
+        url.append(baseurl+thread_id)
     full = []
     for i in range(len(poster)):
         full.append([poster[i], thread[i], time[i], url[i]])
@@ -87,7 +86,7 @@ def exists_in_old(item, old_full):
             return True
     return False
 
-baseurl = "https://japanesemetalforum.com/"
+baseurl = "https://jpmetal.org/showthread.php?tid="
 loginurl = "https://japanesemetalforum.com/member.php?action=login"
 cj = http.cookiejar.CookieJar()
 
@@ -148,8 +147,7 @@ while True:
         full = update_info(soup)
         for i in range(0, len(full)):
             if not exists_in_old(full[i], old_full) and not first_join:
-                msg_send(irc, channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
-                msg_send(irc, channel, full[i][3])
+                msg_send(irc, channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
                 time.sleep(1)
         if first_join:
             msg_send(irc, channel, "hi")
