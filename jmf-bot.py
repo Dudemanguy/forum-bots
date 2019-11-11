@@ -46,12 +46,15 @@ def execute_command(irc, channel, substring, user):
         return 0
 
 def check_for_command(irc, channel, text):
-    if text.find('.JMFbot ') != -1:
-        user = text.split("~")[0][1:]
-        user = user[:len(user)-1]
-        substring = text.split(".JMFbot ")[1]
-        ret = execute_command(irc, channel, substring, user)
-        return ret
+    if text.find(".JMFbot ") != -1:
+        command = text.split("#jpmetal ")[1][1:]
+        if command[:8] == ".JMFbot ":
+            user = text.split("~")[0][1:]
+            user = user[:len(user)-1]
+            substring = text.split(".JMFbot ")[1]
+            ret = execute_command(irc, channel, substring, user)
+            return ret
+    return 0
 
 def identify_name(irc, text, botpass):
     if text.find('PING') != -1:
