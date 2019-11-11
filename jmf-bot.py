@@ -1,10 +1,8 @@
 import getpass
 import http.cookiejar
 import mechanize
-import os
 import re
 import socket
-import sys
 import time
 from bs4 import BeautifulSoup
 
@@ -107,7 +105,7 @@ br.submit()
 server = "irc.rizon.net"
 port = 6667
 channel = "#jpmetal"
-botnick = "JMF_Bot"
+botnick = "JMFbot"
 irc = IRC()
 irc.server_connect(server, port, botnick)
 in_channel = False
@@ -126,7 +124,7 @@ while True:
 
     for i in range(0, len(full)):
         if not exists_in_old(full[i], old_full):
-            irc.send(channel, "[JMF_Bot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
+            irc.send(channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+")")
             irc.send(channel, full[i][3])
             time.sleep(1)
     old_full = full
