@@ -13,37 +13,41 @@ def channel_join(irc, channel):
     return True
  
 def msg_send(irc, channel, msg):
-    # Transfer data
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
  
 def server_connect(irc, server, port, botnick):
-    # Connect to the server
     print("Connecting to: " + server)
     irc.connect((server, port))
-
-    # Perform user authentication
     irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
     time.sleep(5)
 
+def execute_command(irc, channel, substring):
+    if substring[:5] == "echo ":
+        arguments = substring.split("echo ")[1]
+        msg_send(irc, channel, arguments)
+
+def check_for_command(irc, channel, text):
+    if text.find('.JMFbot ') != -1:
+        substring = text.split(".JMFbot ")[1]
+        execute_command(irc, channel, substring)
+
 def get_response(irc):
     time.sleep(1)
-    # Get the response
     resp = irc.recv(4096).decode("UTF-8")
- 
     return resp
 
-def identify_name(irc, resp, botpass):
-    if resp.find('PING') != -1:
+def identify_name(irc, text, botpass):
+    if text.find('PING') != -1:
         irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+botpass+"\r\n", "UTF-8"))
         return True
     return False
 
-def reply_pong(irc, resp):
-    if resp.find('PING') != -1:                      
-        for i in range(len(resp.split())):
-            if resp.split()[i] == "PING":
-                irc.send(bytes('PONG '+resp.split()[i+1]+'\r\n', "UTF-8"))
+def reply_pong(irc, text):
+    if text.find('PING') != -1:                      
+        for i in range(len(text.split())):
+            if text.split()[i] == "PING":
+                irc.send(bytes('PONG '+text.split()[i+1]+'\r\n', "UTF-8"))
 
 def get_new_html():
     searchurl = "https://japanesemetalforum.com/search.php?action=getdaily"
@@ -95,7 +99,7 @@ br.set_handle_redirect(True)
 br.set_handle_referer(True)
 br.set_handle_robots(False)
 br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
-br.addheaders = [('User-agent', 'Chrome')]
+br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0')]
 
 br.open(loginurl)
 br.select_form(nr=1)
@@ -136,6 +140,8 @@ while True:
 
     if not in_channel and identified and init_server_message:
         in_channel = channel_join(irc, channel)
+
+    check_for_command(irc, channel, text)
 
     if in_channel and elapsed_time > 60:
         soup = get_new_html()
