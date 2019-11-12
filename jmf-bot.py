@@ -11,6 +11,12 @@ def channel_join(state, irc, channel):
     time.sleep(1)
     irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
     state["in_channel"] = True
+
+def check_only_numbers(string):
+    for i in string:
+        if not i.isdigit():
+            return False
+    return True
  
 def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
@@ -26,25 +32,27 @@ def server_connect(irc, server, port, botnick):
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
     time.sleep(5)
 
-def execute_command(state, irc, channel, substring, user):
-    if substring[:5] == "echo ":
-        arguments = substring.split("echo ")[1]
+def execute_command(state, irc, channel, str_split, user):
+    command = str_split[0]
+    arguments = ""
+    if len(str_split) > 1:
+        arguments = str_split[1]
+    if command == "echo" and arguments != "":
         msg_send(irc, channel, arguments)
-    elif substring == "help":
+    elif command == "help" and arguments == "":
         msg_send(irc, channel, "Usage: .JMFbot [command] [arguments]")
         time.sleep(1)
         msg_send(irc, channel, "Type '.JMFbot help [command]' for more details about a particular command")
         time.sleep(1)
         msg_send(irc, channel, "Available commands: echo, help, kill")
-    elif substring[:5] == "help ":
-        arguments = substring.split("help ")[1]
+    elif command == "help" and arguments != "":
         if arguments == "echo":
-            msg_send(irc, channel, "echo [message]  --  tell the bot echo back a message")
+            msg_send(irc, channel, "echo [message] -- tell the bot echo back a message")
         if arguments == "help":
             msg_send(irc, channel, "help [command(optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
-            msg_send(irc, channel, "kill  --  kill the bot; only channel ops can use this")
-    elif substring == "kill":
+            msg_send(irc, channel, "kill -- kill the bot; only channel ops can use this")
+    elif command == "kill" and arguments == "":
         irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
         names = get_response(irc)
         names = names.split()
@@ -54,16 +62,35 @@ def execute_command(state, irc, channel, substring, user):
                 irc.shutdown(2)
                 irc.close()
                 state["kill"] = True
+                return
         msg_send(irc, channel, "Only channel ops can kill me.")
+    elif command == "set" and arguments != "":
+        arguments = arguments.split()
+        if arguments[0] == "ragequits":
+            if check_only_numbers(arguments[1]):
+                state["ragequits"] = int(arguments[1])
+                msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
+            else:
+                msg_send(irc, channel, "Error: ragequits can only be set to an integer value")
+    elif command == "show" and arguments != "":
+        if arguments == "ragequits":
+            msg_send(irc, channel, "The ragequit counter is at "+str(state["ragequits"]))
 
 def check_for_command(state, irc, channel, text):
     if text.find(".JMFbot ") != -1:
-        command = text.split("#jpmetal ")[1][1:]
-        if command[:8] == ".JMFbot ":
+        raw = text.split("#jpmetal ")[1][1:]
+        str_split = raw.split(None, 2)
+        if str_split[0] == ".JMFbot" and len(str_split) > 1:
             user = text.split("~")[0][1:]
             user = user[:len(user)-1]
-            substring = text.split(".JMFbot ")[1]
-            execute_command(state, irc, channel, substring, user)
+            execute_command(state, irc, channel, str_split[1:], user)
+
+def check_for_ragequit(state, irc, channel, text):
+    if len(text.split(":")) == 3:
+        subset = text.split(":")[1]
+        if subset.find("QUIT") != -1 and subset[:8] == "Jeckidy!"):
+            state["ragequits"] += 1
+            msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
 
 def identify_name(state, irc, text, botpass):
     if text.find('PING') != -1:
@@ -147,7 +174,8 @@ state = {
     "fully_started" : False,
     "identified" : False,
     "in_channel" : False,
-    "kill" : False
+    "kill" : False,
+    "ragequits" : 0
 }
 old_full = []
 old_time = 0
@@ -172,6 +200,7 @@ while not state["kill"]:
         continue
 
     check_for_command(state, irc, channel, text)
+    check_for_ragequit(state, irc, channel, text)
 
     if state["fully_started"] and elapsed_time > 60:
         soup = get_new_html()
