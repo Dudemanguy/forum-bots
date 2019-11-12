@@ -32,7 +32,7 @@ def execute_command(irc, channel, substring, user):
         arguments = substring.split("echo ")[1]
         msg_send(irc, channel, arguments)
         return 0
-    if substring[:4] == "quit":
+    if substring[:4] == "kill":
         irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
         names = get_response(irc)
         names = names.split()
