@@ -35,12 +35,6 @@ def check_for_user_entry(state, irc, channel, text):
             user = subset.split("!")[0]
             msg_send(irc, channel, "hi "+user)
 
-def check_only_numbers(string):
-    for i in string:
-        if not i.isdigit():
-            return False
-    return True
-
 def execute_command(state, irc, channel, str_split, user):
     command = str_split[0]
     arguments = ""
@@ -53,27 +47,29 @@ def execute_command(state, irc, channel, str_split, user):
         time.sleep(1)
         msg_send(irc, channel, "Type '.JMFbot help [command]' for more details about a particular command")
         time.sleep(1)
-        msg_send(irc, channel, "Available commands: echo, help, kill")
+        msg_send(irc, channel, "Available commands: echo, help, kill, set, show")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(irc, channel, "echo [message] -- tell the bot echo back a message")
         if arguments == "help":
             msg_send(irc, channel, "help [command(optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
-            msg_send(irc, channel, "kill -- kill the bot; only channel ops can use this")
+            msg_send(irc, channel, "kill -- kill the bot (channel op only)")
+        if arguments == "set":
+            msg_send(irc, channel, "set [property] [argument] -- set one of the bot's properties to a particular value (channel op only)")
+        if arguments == "show":
+            msg_send(irc, channel, "show [property] -- show the value of one of the bot's properties")
     elif command == "kill" and arguments == "":
-        irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
-        names = get_response(irc)
-        names = names.split()
-        for i in names:
-            if i[0] == "@" and user == i[1:]:
-                msg_send(irc, channel, "bbl")
-                irc.shutdown(2)
-                irc.close()
-                state["kill"] = True
-                return
-        msg_send(irc, channel, "Only channel ops can kill me.")
+        if if_op(irc, channel, user):
+            msg_send(irc, channel, "bbl")
+            irc.shutdown(2)
+            irc.close()
+            state["kill"] = True
+        else:
+            msg_send(irc, channel, "Only channel ops can kill me.")
     elif command == "set" and arguments != "":
+        if not if_op(irc, channel, user):
+            msg_send(irc, channel, "Only channel ops can use the set command.")
         arguments = arguments.split()
         if arguments[0] == "greeter":
             if arguments[1] == "on":
@@ -83,7 +79,7 @@ def execute_command(state, irc, channel, str_split, user):
                 state["greeter"] = False
                 msg_send(irc, channel, "User greeter turned off")
         elif arguments[0] == "ragequits":
-            if check_only_numbers(arguments[1]):
+            if only_numbers(arguments[1]):
                 state["ragequits"] = int(arguments[1])
                 msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
             else:
@@ -113,8 +109,23 @@ def identify_name(state, irc, text, botpass):
         irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+botpass+"\r\n", "UTF-8"))
         state["identified"] = True
 
+def if_op(irc, channel, user):
+    irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
+    names = get_response(irc)
+    names = names.split()
+    for i in names:
+        if i[0] == "@" and user == i[1:]:
+            return True
+    return False
+
 def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
+
+def only_numbers(string):
+    for i in string:
+        if not i.isdigit():
+            return False
+    return True
 
 def reply_pong(irc, text):
     if text.find('PING') != -1:                      
