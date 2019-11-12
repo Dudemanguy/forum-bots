@@ -69,6 +69,7 @@ def execute_command(state, irc, channel, str_split, user):
                 msg_send(irc, channel, "Killing bot in "+arguments+" seconds")
             elif arguments != "" and not only_numbers(arguments):
                 msg_send(irc, channel, "Error: the timeout must be an integer value")
+                return
             state["kill"] = True
         else:
             msg_send(irc, channel, "Only channel ops can kill me.")
@@ -80,6 +81,7 @@ def execute_command(state, irc, channel, str_split, user):
                 msg_send(irc, channel, "Rebooting bot in "+arguments+" seconds")
             elif arguments != "" and not only_numbers(arguments):
                 msg_send(irc, channel, "Error: the reboot time must be an integer value")
+                return
             state["reboot"] = True
         else:
             msg_send(irc, channel, "Only channel ops can reboot me.")
