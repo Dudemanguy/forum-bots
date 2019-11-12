@@ -12,25 +12,27 @@ def channel_join(state, irc, channel):
     irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
     state["in_channel"] = True
 
+def check_for_command(state, irc, channel, text):
+    if text.find(".JMFbot ") != -1:
+        raw = text.split("#jpmetal ")[1][1:]
+        str_split = raw.split(None, 2)
+        if str_split[0] == ".JMFbot" and len(str_split) > 1:
+            user = text.split("~")[0][1:]
+            user = user[:len(user)-1]
+            execute_command(state, irc, channel, str_split[1:], user)
+
+def check_for_ragequit(state, irc, channel, text):
+    if len(text.split(":")) == 3:
+        subset = text.split(":")[1]
+        if subset.find("QUIT") != -1 and subset[:8] == "Jeckidy!":
+            state["ragequits"] += 1
+            msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
+
 def check_only_numbers(string):
     for i in string:
         if not i.isdigit():
             return False
     return True
- 
-def msg_send(irc, channel, msg):
-    irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
-
-def get_response(irc):
-    resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
-    return resp
- 
-def server_connect(irc, server, port, botnick):
-    print("Connecting to: " + server)
-    irc.connect((server, port))
-    irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
-    irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
-    time.sleep(5)
 
 def execute_command(state, irc, channel, str_split, user):
     command = str_split[0]
@@ -76,26 +78,29 @@ def execute_command(state, irc, channel, str_split, user):
         if arguments == "ragequits":
             msg_send(irc, channel, "The ragequit counter is at "+str(state["ragequits"]))
 
-def check_for_command(state, irc, channel, text):
-    if text.find(".JMFbot ") != -1:
-        raw = text.split("#jpmetal ")[1][1:]
-        str_split = raw.split(None, 2)
-        if str_split[0] == ".JMFbot" and len(str_split) > 1:
-            user = text.split("~")[0][1:]
-            user = user[:len(user)-1]
-            execute_command(state, irc, channel, str_split[1:], user)
+def exists_in_old(item, old_full):
+    for i in range(0, len(old_full)):
+        if item == old_full[i]:
+            return True
+    return False
 
-def check_for_ragequit(state, irc, channel, text):
-    if len(text.split(":")) == 3:
-        subset = text.split(":")[1]
-        if subset.find("QUIT") != -1 and subset[:8] == "Jeckidy!"):
-            state["ragequits"] += 1
-            msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
+def get_new_html():
+    searchurl = "https://japanesemetalforum.com/search.php?action=getdaily"
+    posts = br.open(searchurl).read()
+    soup = BeautifulSoup(posts, "html.parser")
+    return soup
+
+def get_response(irc):
+    resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
+    return resp
 
 def identify_name(state, irc, text, botpass):
     if text.find('PING') != -1:
         irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+botpass+"\r\n", "UTF-8"))
         state["identified"] = True
+
+def msg_send(irc, channel, msg):
+    irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
 
 def reply_pong(irc, text):
     if text.find('PING') != -1:                      
@@ -103,11 +108,12 @@ def reply_pong(irc, text):
             if text.split()[i] == "PING":
                 irc.send(bytes('PONG '+text.split()[i+1]+'\r\n', "UTF-8"))
 
-def get_new_html():
-    searchurl = "https://japanesemetalforum.com/search.php?action=getdaily"
-    posts = br.open(searchurl).read()
-    soup = BeautifulSoup(posts, "html.parser")
-    return soup
+def server_connect(irc, server, port, botnick):
+    print("Connecting to: " + server)
+    irc.connect((server, port))
+    irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
+    irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
+    time.sleep(5)
 
 def update_info(soup):
     poster = []
@@ -133,12 +139,6 @@ def update_info(soup):
     for i in range(len(poster)):
         full.append([poster[i], thread[i], time[i], url[i]])
     return full
-
-def exists_in_old(item, old_full):
-    for i in range(0, len(old_full)):
-        if item == old_full[i]:
-            return True
-    return False
 
 baseurl = "https://jpmetal.org/showthread.php?tid="
 loginurl = "https://japanesemetalforum.com/member.php?action=login"
