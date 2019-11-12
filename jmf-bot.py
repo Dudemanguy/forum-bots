@@ -56,9 +56,9 @@ def execute_command(state, irc, channel, str_split, user):
         if arguments == "kill":
             msg_send(irc, channel, "kill -- kill the bot (channel op only)")
         if arguments == "set":
-            msg_send(irc, channel, "set [property] [argument] -- set one of the bot's properties to a particular value (channel op only)")
+            msg_send(irc, channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
         if arguments == "show":
-            msg_send(irc, channel, "show [property] -- show the value of one of the bot's properties")
+            msg_send(irc, channel, "show [property] -- show the value of one of the bot's properties; 'properties' will list all properties")
     elif command == "kill" and arguments == "":
         if if_op(irc, channel, user):
             msg_send(irc, channel, "bbl")
@@ -85,6 +85,10 @@ def execute_command(state, irc, channel, str_split, user):
             else:
                 msg_send(irc, channel, "Error: ragequits can only be set to an integer value")
     elif command == "show" and arguments != "":
+        if arguments == "properties":
+            msg_send(irc, channel, "greeter -- greet users on entry (boolean: on/off)")
+            time.sleep(1)
+            msg_send(irc, channel, "ragequits -- ragequit counter (integer)")
         if arguments == "ragequits":
             msg_send(irc, channel, "The ragequit counter is at "+str(state["ragequits"]))
 
