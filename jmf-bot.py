@@ -7,10 +7,10 @@ import ssl
 import time
 from bs4 import BeautifulSoup
 
-def channel_join(irc, channel):
+def channel_join(state, irc, channel):
     time.sleep(1)
     irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
-    return True
+    state["in_channel"] = True
  
 def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
@@ -26,18 +26,16 @@ def server_connect(irc, server, port, botnick):
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
     time.sleep(5)
 
-def execute_command(irc, channel, substring, user):
+def execute_command(state, irc, channel, substring, user):
     if substring[:5] == "echo ":
         arguments = substring.split("echo ")[1]
         msg_send(irc, channel, arguments)
-        return 0
     elif substring == "help":
         msg_send(irc, channel, "Usage: .JMFbot [command] [arguments]")
         time.sleep(1)
         msg_send(irc, channel, "Type '.JMFbot help [command]' for more details about a particular command")
         time.sleep(1)
         msg_send(irc, channel, "Available commands: echo, help, kill")
-        return 0
     elif substring[:5] == "help ":
         arguments = substring.split("help ")[1]
         if arguments == "echo":
@@ -46,7 +44,6 @@ def execute_command(irc, channel, substring, user):
             msg_send(irc, channel, "help [command(optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
             msg_send(irc, channel, "kill  --  kill the bot; only channel ops can use this")
-        return 0
     elif substring == "kill":
         irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
         names = get_response(irc)
@@ -56,28 +53,22 @@ def execute_command(irc, channel, substring, user):
                 msg_send(irc, channel, "bbl")
                 irc.shutdown(2)
                 irc.close()
-                return 1
+                state["kill"] = True
         msg_send(irc, channel, "Only channel ops can kill me.")
-        return 0
-    else:
-        return 0
 
-def check_for_command(irc, channel, text):
+def check_for_command(state, irc, channel, text):
     if text.find(".JMFbot ") != -1:
         command = text.split("#jpmetal ")[1][1:]
         if command[:8] == ".JMFbot ":
             user = text.split("~")[0][1:]
             user = user[:len(user)-1]
             substring = text.split(".JMFbot ")[1]
-            ret = execute_command(irc, channel, substring, user)
-            return ret
-    return 0
+            execute_command(state, irc, channel, substring, user)
 
-def identify_name(irc, text, botpass):
+def identify_name(state, irc, text, botpass):
     if text.find('PING') != -1:
         irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+botpass+"\r\n", "UTF-8"))
-        return True
-    return False
+        state["identified"] = True
 
 def reply_pong(irc, text):
     if text.find('PING') != -1:                      
@@ -151,45 +142,46 @@ irc = socket.socket()
 irc = ssl.wrap_socket(irc)
 
 server_connect(irc, server, port, botnick)
-in_channel = False
-first_join = True
-identified = False
-fully_started = False
+state = {
+    "first_join" : True,
+    "fully_started" : False,
+    "identified" : False,
+    "in_channel" : False,
+    "kill" : False
+}
 old_full = []
 old_time = 0
 
-while True:
+while not state["kill"]:
     text = get_response(irc)
     print(text)
     elapsed_time = time.time() - old_time
 
     reply_pong(irc, text)
 
-    if not fully_started:
-        if not identified:
-            identified = identify_name(irc, text, botpass)
+    if not state["fully_started"]:
+        if not state["identified"]:
+            identify_name(state, irc, text, botpass)
 
         if text.find('+r') != -1:                      
-            in_channel = channel_join(irc, channel)
+            channel_join(state, irc, channel)
 
         if text.find('+v') != -1:
             msg_send(irc, channel, "hi")
-            fully_started = True
+            state["fully_started"] = True
         continue
 
-    ret = check_for_command(irc, channel, text)
-    if ret == 1:
-        break
+    check_for_command(state, irc, channel, text)
 
-    if in_channel and elapsed_time > 60:
+    if state["fully_started"] and elapsed_time > 60:
         soup = get_new_html()
         full = update_info(soup)
         for i in range(0, len(full)):
-            if not exists_in_old(full[i], old_full) and not first_join:
+            if not exists_in_old(full[i], old_full) and not state["first_join"]:
                 msg_send(irc, channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
                 time.sleep(1)
-        if first_join:
-            first_join = False
+        if state["first_join"]:
+            state["first_join"] = False
         old_full = full
         old_time = time.time()
 
