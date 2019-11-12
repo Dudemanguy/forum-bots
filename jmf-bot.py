@@ -99,7 +99,7 @@ def execute_command(state, irc, channel, str_split, user):
             msg_send(irc, channel, "Only channel ops can reboot me.")
     elif command == "random" and arguments != "":
         if arguments == "thread":
-            # add a random constant that exists for unknown reasons but whatever
+            # add this mysterious constant that exists for unknown reasons but whatever
             thread_count = get_thread_count() + 803
             rand_soup = -1
             while rand_soup == -1:
