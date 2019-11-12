@@ -32,6 +32,22 @@ def execute_command(irc, channel, substring, user):
         arguments = substring.split("echo ")[1]
         msg_send(irc, channel, arguments)
         return 0
+    if substring == "help":
+        msg_send(irc, channel, "Usage: .JMFbot [command] [arguments]")
+        time.sleep(1)
+        msg_send(irc, channel, "Type '.JMFbot help all' for more detailed output")
+        return 0
+    if substring == "help all":
+        msg_send(irc, channel, "Usage: .JMFbot [command] [arguments]")
+        time.sleep(1)
+        msg_send(irc, channel, "Commands:")
+        time.sleep(1)
+        msg_send(irc, channel, "echo ['message']     --  tell the bot echo back a message")
+        time.sleep(1)
+        msg_send(irc, channel, "help [all(optional)] --  display a help message; add 'all' as an additional argument for more detailed output")
+        time.sleep(1)
+        msg_send(irc, channel, "kill                 --  kill the bot; only channel ops can use this")
+        return 0
     if substring == "kill":
         irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
         names = get_response(irc)
