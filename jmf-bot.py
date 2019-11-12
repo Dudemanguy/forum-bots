@@ -17,7 +17,7 @@ def msg_send(irc, channel, msg):
 
 def get_response(irc):
     time.sleep(1)
-    resp = irc.recv(4096).decode("UTF-8")
+    resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
     return resp
  
 def server_connect(irc, server, port, botnick):
@@ -32,12 +32,12 @@ def execute_command(irc, channel, substring, user):
         arguments = substring.split("echo ")[1]
         msg_send(irc, channel, arguments)
         return 0
-    if substring == "help":
+    elif substring == "help":
         msg_send(irc, channel, "Usage: .JMFbot [command] [arguments]")
         time.sleep(1)
         msg_send(irc, channel, "Type '.JMFbot help [command]' for more details about a particular command")
         return 0
-    if substring[:5] == "help ":
+    elif substring[:5] == "help ":
         arguments = substring.split("help ")[1]
         if arguments == "echo":
             msg_send(irc, channel, "echo ['message']  --  tell the bot echo back a message")
@@ -46,7 +46,7 @@ def execute_command(irc, channel, substring, user):
         if arguments == "kill":
             msg_send(irc, channel, "kill  --  kill the bot; only channel ops can use this")
         return 0
-    if substring == "kill":
+    elif substring == "kill":
         irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
         names = get_response(irc)
         names = names.split()
@@ -57,6 +57,8 @@ def execute_command(irc, channel, substring, user):
                 irc.close()
                 return 1
         msg_send(irc, channel, "Only channel ops can kill me.")
+        return 0
+    else:
         return 0
 
 def check_for_command(irc, channel, text):
