@@ -48,7 +48,7 @@ def execute_command(state, irc, channel, str_split, user):
         time.sleep(1)
         msg_send(irc, channel, "Type '.jmfbot help [command]' for more details about a particular command")
         time.sleep(1)
-        msg_send(irc, channel, "Available commands: echo, help, kill, random, set, show")
+        msg_send(irc, channel, "Available commands: echo, help, kill, list, random, set, show")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(irc, channel, "echo [message] -- tell the bot echo back a message")
@@ -56,6 +56,8 @@ def execute_command(state, irc, channel, str_split, user):
             msg_send(irc, channel, "help [command (optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
             msg_send(irc, channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
+        if arguments == "list":
+            msg_send(irc, channel, "list [actions|properties] -- list all actions/properties with a short description")
         if arguments == "random":
             msg_send(irc, channel, "random [action] -- randomize a certain action")
         if arguments == "reboot":
@@ -63,7 +65,7 @@ def execute_command(state, irc, channel, str_split, user):
         if arguments == "set":
             msg_send(irc, channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
         if arguments == "show":
-            msg_send(irc, channel, "show [property] -- show the value of one of the bot's properties; 'properties' will list all properties")
+            msg_send(irc, channel, "show [property] -- show the value of one of the bot's properties")
     elif command == "kill":
         if is_op(irc, channel, user):
             if arguments != "" and only_numbers(arguments):
@@ -76,6 +78,13 @@ def execute_command(state, irc, channel, str_split, user):
             state["kill"] = True
         else:
             msg_send(irc, channel, "Only channel ops can kill me.")
+    elif command == "list" and arguments != "":
+        if arguments == "actions":
+            msg_send(irc, channel, "thread -- retrieve a thread from the forum")
+        elif arguments == "properties":
+            msg_send(irc, channel, "greeter -- greet users on entry (boolean: on/off)")
+            time.sleep(1)
+            msg_send(irc, channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
         if is_op(irc, channel, user):
             if arguments != "" and only_numbers(arguments):
@@ -115,10 +124,6 @@ def execute_command(state, irc, channel, str_split, user):
             else:
                 msg_send(irc, channel, "Error: ragequits can only be set to an integer value")
     elif command == "show" and arguments != "":
-        if arguments == "properties":
-            msg_send(irc, channel, "greeter -- greet users on entry (boolean: on/off)")
-            time.sleep(1)
-            msg_send(irc, channel, "ragequits -- ragequit counter (integer)")
         if arguments == "ragequits":
             msg_send(irc, channel, "The ragequit counter is at "+str(state["ragequits"]))
 
