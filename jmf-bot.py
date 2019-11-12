@@ -101,9 +101,12 @@ def execute_command(state, irc, channel, str_split, user):
         if arguments == "thread":
             # add a random constant that exists for unknown reasons but whatever
             thread_count = get_thread_count() + 803
-            rand_tid = random.randint(1, thread_count)
-            rand_url = baseurl+str(rand_tid)
-            rand_soup = get_html(rand_url)
+            rand_soup = -1
+            while rand_soup == -1:
+                time.sleep(1)
+                rand_tid = random.randint(1, thread_count)
+                rand_url = baseurl+str(rand_tid)
+                rand_soup = get_html(rand_url)
             thread_title = rand_soup.find("title").contents[0]
             msg_send(irc, channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
@@ -134,9 +137,12 @@ def exists_in_old(item, old_full):
     return False
 
 def get_html(url):
-    html = br.open(url).read()
-    soup = BeautifulSoup(html, "html.parser")
-    return soup
+    try:
+        html = br.open(url).read()
+        soup = BeautifulSoup(html, "html.parser")
+        return soup
+    except:
+        return -1
 
 def get_response(irc):
     resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
