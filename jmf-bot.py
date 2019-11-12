@@ -28,6 +28,13 @@ def check_for_ragequit(state, irc, channel, text):
             state["ragequits"] += 1
             msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
 
+def check_for_user_entry(state, irc, channel, text):
+    if len(text.split(":")) == 3:
+        subset = text.split(":")[1]
+        if subset.find("JOIN") != -1:
+            user = subset.split("!")[0]
+            msg_send(irc, channel, "hi "+user)
+
 def check_only_numbers(string):
     for i in string:
         if not i.isdigit():
@@ -68,7 +75,14 @@ def execute_command(state, irc, channel, str_split, user):
         msg_send(irc, channel, "Only channel ops can kill me.")
     elif command == "set" and arguments != "":
         arguments = arguments.split()
-        if arguments[0] == "ragequits":
+        if arguments[0] == "greeter":
+            if arguments[1] == "on":
+                state["greeter"] = True
+                msg_send(irc, channel, "User greeter turned on")
+            elif arguments[1] == "off":
+                state["greeter"] = False
+                msg_send(irc, channel, "User greeter turned off")
+        elif arguments[0] == "ragequits":
             if check_only_numbers(arguments[1]):
                 state["ragequits"] = int(arguments[1])
                 msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
@@ -172,6 +186,7 @@ server_connect(irc, server, port, botnick)
 state = {
     "first_join" : True,
     "fully_started" : False,
+    "greeter" : True,
     "identified" : False,
     "in_channel" : False,
     "kill" : False,
@@ -201,6 +216,9 @@ while not state["kill"]:
 
     check_for_command(state, irc, channel, text)
     check_for_ragequit(state, irc, channel, text)
+
+    if state["greeter"]:
+        check_for_user_entry(state, irc, channel, text)
 
     if state["fully_started"] and elapsed_time > 60:
         soup = get_new_html()
