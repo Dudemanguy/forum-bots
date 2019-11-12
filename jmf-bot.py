@@ -16,7 +16,6 @@ def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
 
 def get_response(irc):
-    time.sleep(1)
     resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
     return resp
  
@@ -153,7 +152,7 @@ server_connect(irc, server, port, botnick)
 in_channel = False
 first_join = True
 identified = False
-init_server_message = False
+fully_started = False
 old_full = []
 old_time = 0
 
@@ -164,16 +163,17 @@ while True:
 
     reply_pong(irc, text)
 
-    if not identified:
-        identified = identify_name(irc, text, botpass)
+    if not fully_started:
+        if not identified:
+            identified = identify_name(irc, text, botpass)
 
-    if not init_server_message:
         if text.find('+r') != -1:                      
-            init_server_message = True
-        continue
+            in_channel = channel_join(irc, channel)
 
-    if not in_channel and identified and init_server_message:
-        in_channel = channel_join(irc, channel)
+        if text.find('+v') != -1:
+            msg_send(irc, channel, "hi")
+            fully_started = True
+        continue
 
     ret = check_for_command(irc, channel, text)
     if ret == 1:
@@ -187,7 +187,6 @@ while True:
                 msg_send(irc, channel, "[JMFbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
                 time.sleep(1)
         if first_join:
-            msg_send(irc, channel, "hi")
             first_join = False
         old_full = full
         old_time = time.time()
