@@ -1,6 +1,7 @@
 import getpass
 import http.cookiejar
 import mechanize
+import random
 import re
 import socket
 import ssl
@@ -47,7 +48,7 @@ def execute_command(state, irc, channel, str_split, user):
         time.sleep(1)
         msg_send(irc, channel, "Type '.jmfbot help [command]' for more details about a particular command")
         time.sleep(1)
-        msg_send(irc, channel, "Available commands: echo, help, kill, set, show")
+        msg_send(irc, channel, "Available commands: echo, help, kill, random, set, show")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(irc, channel, "echo [message] -- tell the bot echo back a message")
@@ -55,6 +56,8 @@ def execute_command(state, irc, channel, str_split, user):
             msg_send(irc, channel, "help [command (optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
             msg_send(irc, channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
+        if arguments == "random":
+            msg_send(irc, channel, "random [action] -- randomize a certain action")
         if arguments == "reboot":
             msg_send(irc, channel, "reboot [timeout (optional)] -- reboot the bot with an optional timeout (channel op only)")
         if arguments == "set":
@@ -85,6 +88,15 @@ def execute_command(state, irc, channel, str_split, user):
             state["reboot"] = True
         else:
             msg_send(irc, channel, "Only channel ops can reboot me.")
+    elif command == "random" and arguments != "":
+        if arguments == "thread":
+            # add a random constant that exists for unknown reasons but whatever
+            thread_count = get_thread_count() + 803
+            rand_tid = random.randint(1, thread_count)
+            rand_url = baseurl+str(rand_tid)
+            rand_soup = get_html(rand_url)
+            thread_title = rand_soup.find("title").contents[0]
+            msg_send(irc, channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
         if not is_op(irc, channel, user):
             msg_send(irc, channel, "Only channel ops can use the set command.")
@@ -116,15 +128,18 @@ def exists_in_old(item, old_full):
             return True
     return False
 
-def get_new_html():
-    searchurl = "https://japanesemetalforum.com/search.php?action=getdaily"
-    posts = br.open(searchurl).read()
-    soup = BeautifulSoup(posts, "html.parser")
+def get_html(url):
+    html = br.open(url).read()
+    soup = BeautifulSoup(html, "html.parser")
     return soup
 
 def get_response(irc):
     resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
     return resp
+
+def get_thread_count():
+    soup = get_html(statsurl)
+    return int(soup.find_all("td")[3].find_all("strong")[1].contents[0].replace(",",""))
 
 def identify_name(state, irc, text, botpass):
     if text.find('PING') != -1:
@@ -188,7 +203,9 @@ def update_info(soup):
     return full
 
 baseurl = "https://jpmetal.org/showthread.php?tid="
-loginurl = "https://japanesemetalforum.com/member.php?action=login"
+loginurl = "https://jpmetal.org/member.php?action=login"
+searchurl = "https://jpmetal.org/search.php?action=getdaily"
+statsurl = "https://jpmetal.org/stats.php"
 cj = http.cookiejar.CookieJar()
 
 br = mechanize.Browser()
@@ -285,7 +302,7 @@ while True:
         check_for_user_entry(state, irc, channel, text)
 
     if state["fully_started"] and elapsed_time > 60:
-        soup = get_new_html()
+        soup = get_html(searchurl)
         full = update_info(soup)
         for i in range(0, len(full)):
             if not exists_in_old(full[i], old_full) and not state["first_join"]:
