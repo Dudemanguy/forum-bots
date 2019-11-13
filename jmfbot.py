@@ -1,13 +1,152 @@
+#!/usr/bin/env python3
+
 import argparse
 import getpass
 import http.cookiejar
 import mechanize
+import os
 import random
 import re
 import socket
 import ssl
 import time
 from bs4 import BeautifulSoup
+
+class irc_bot():
+    baseurl = "https://jpmetal.org/showthread.php?tid="
+    loginurl = "https://jpmetal.org/member.php?action=login"
+    searchurl = "https://jpmetal.org/search.php?action=getdaily"
+    statsurl = "https://jpmetal.org/stats.php"
+
+    botnick = ""
+    botpass = ""
+    br = ""
+    channel = ""
+    port = ""
+    server = ""
+    ssl = ""
+
+    irc = ""
+
+    state = {
+        "connected" : False,
+        "first_join" : True,
+        "fully_started" : False,
+        "greeter" : True,
+        "identified" : False,
+        "identify" : True,
+        "in_channel" : False,
+        "kill" : False,
+        "ragequits" : 0,
+        "reboot" : False,
+        "ssl" : True,
+        "timeout" : 0,
+        "timestamp" : 0
+    }
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--botnick", type=str, default="jmfbot", nargs='?', const=1, help="bot nickname")
+    parser.add_argument("--botpass", type=str, default= "", nargs='?', const=1, help="bot password")
+    parser.add_argument("--channel", type=str, default="#jpmetal", nargs='?', const=1, help="channel to join")
+    parser.add_argument("--identify", type=int, default=1, help="identify name to server")
+    parser.add_argument("--server", type=str, default="irc.rizon.net", nargs='?', const=1, help="server to use")
+    parser.add_argument("--ssl", type=int, default=1, help="use ssl")
+    args = parser.parse_args()
+
+    bot = irc_bot()
+
+    bot.botnick = args.botnick
+    bot.botpass = args.botpass
+    bot.channel = args.channel
+    bot.server = args.server
+
+    bot.br,bot.botpass = mechanize_login(bot)
+    bot.br.submit()
+    
+    if args.identify == 0:
+        bot.state["identify"] = False
+    else:
+        bot.state["identify"] = True
+
+    if args.ssl == 0:
+        bot.state["ssl"] = False
+        bot.port = 6667
+    else:
+        bot.state["ssl"] = True
+        bot.port = 6697
+
+    old_full = []
+    old_time = 0
+
+    while True:
+        if not bot.state["connected"]:
+            bot.irc = socket.socket()
+            if bot.state["ssl"]:
+                bot.irc = ssl.wrap_socket(bot.irc)
+            server_connect(bot.irc, bot.server, bot.port, bot.botnick)
+            bot.state["connected"] = True
+
+        if bot.state["connected"]:
+            text = get_response(bot.irc)
+            print(text)
+
+        elapsed_time = time.time() - old_time
+
+        check_text(bot, text)
+
+        if not bot.state["fully_started"]:
+            if not bot.state["identified"] and bot.state["identify"]:
+                identify_name(bot, text)
+                if text.find("Password incorrect.") != -1:
+                    bot.botpass = getpass.getpass("Password: ")
+
+            if bot.state["identify"]:
+                if text.find('+r') != -1:                      
+                    channel_join(bot)
+                if text.find('+v') != -1:
+                    msg_send(bot.irc, bot.channel, "hi")
+                    bot.state["fully_started"] = True
+            else:
+                if text.find("Own a large/active channel") != -1:
+                    channel_join(bot)
+                if text.find("End of /NAMES list.") != -1:
+                    msg_send(bot.irc, bot.channel, "hi")
+                    bot.state["fully_started"] = True
+            continue
+
+        if bot.state["kill"]:
+            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                msg_send(bot.irc, bot.channel, "bbl")
+                time.sleep(1)
+                bot.irc.shutdown(0)
+                bot.irc.close()
+                break
+
+        if bot.state["reboot"]:
+            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                msg_send(bot.irc, bot.channel, "brb")
+                time.sleep(1)
+                bot.irc.shutdown(0)
+                bot.irc.close()
+                os.execl("./jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass, "--channel="+bot.channel,
+                         "--identify="+str(args.identify), "--server="+bot.server, "--ssl="+str(args.ssl))
+
+        if bot.state["fully_started"] and elapsed_time > 60:
+            soup = get_html(bot, bot.searchurl)
+            full = update_info(bot, soup)
+            for i in range(0, len(full)):
+                if not exists_in_old(full[i], old_full) and not bot.state["first_join"]:
+                    msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
+                    time.sleep(1)
+            if bot.state["first_join"]:
+                bot.state["first_join"] = False
+            old_full = full
+            old_time = time.time()
+
+        time.sleep(5)
+
+    return 0
 
 def channel_join(bot):
     time.sleep(1)
@@ -185,25 +324,29 @@ def is_op(irc, channel, user):
             return True
     return False
 
-def mechanize_login(loginurl, botpass):
+def mechanize_login(bot):
     cj = http.cookiejar.CookieJar()
 
-    br = mechanize.Browser()
-    br.set_cookiejar(cj)
-    br.set_handle_equiv(True)
-    br.set_handle_gzip(True)
-    br.set_handle_redirect(True)
-    br.set_handle_referer(True)
-    br.set_handle_robots(False)
-    br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
-    br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0')]
+    bot.br = mechanize.Browser()
+    bot.br.set_cookiejar(cj)
+    bot.br.set_handle_equiv(True)
+    bot.br.set_handle_gzip(True)
+    bot.br.set_handle_redirect(True)
+    bot.br.set_handle_referer(True)
+    bot.br.set_handle_robots(False)
+    bot.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
+    bot.br.addheaders = [("User-agent", "Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0")]
 
-    br.open(loginurl)
-    br.select_form(nr=1)
-    br.form['username'] = input("Username: ")
-    br.form['password'] = getpass.getpass("Password: ")
-    botpass = br.form['password']
-    return br,botpass
+    bot.br.open(bot.loginurl)
+    bot.br.select_form(nr=1)
+    if bot.botpass == "":
+        bot.br.form["username"] = input("Username: ")
+        bot.br.form["password"] = getpass.getpass("Password: ")
+        bot.botpass = bot.br.form['password']
+    else:
+        bot.br.form["username"] = bot.botnick
+        bot.br.form["password"] = bot.botpass
+    return bot.br,bot.botpass
 
 def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
@@ -250,142 +393,6 @@ def update_info(bot, soup):
     for i in range(len(poster)):
         full.append([poster[i], thread[i], time[i], url[i]])
     return full
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--botnick", type=str, default="jmfbot", nargs='?', const=1, help="bot nickname")
-    parser.add_argument("--channel", type=str, default="#jpmetal", nargs='?', const=1, help="channel to join")
-    parser.add_argument("--identify", type=int, default=1, help="identify name to server")
-    parser.add_argument("--server", type=str, default="irc.rizon.net", nargs='?', const=1, help="server to use")
-    parser.add_argument("--ssl", type=int, default=1, help="use ssl")
-    args = parser.parse_args()
-    
-    bot = irc_bot()
-
-    bot.botnick = args.botnick
-    bot.channel = args.channel
-    bot.server = args.server
-    
-    if args.identify == 0:
-        bot.state["identify"] = False
-    else:
-        bot.state["identify"] = True
-
-    if args.ssl == 0:
-        bot.state["ssl"] = False
-        bot.port = 6667
-    else:
-        bot.state["ssl"] = True
-        bot.port = 6697
-
-    old_full = []
-    old_time = 0
-
-    while True:
-        if not bot.state["connected"]:
-            bot.irc = socket.socket()
-            if bot.state["ssl"]:
-                bot.irc = ssl.wrap_socket(bot.irc)
-            server_connect(bot.irc, bot.server, bot.port, bot.botnick)
-            bot.state["connected"] = True
-
-        if bot.state["connected"]:
-            text = get_response(bot.irc)
-            print(text)
-
-        elapsed_time = time.time() - old_time
-
-        check_text(bot, text)
-
-        if not bot.state["fully_started"]:
-            if not bot.state["identified"] and bot.state["identify"]:
-                identify_name(bot, text)
-                if text.find("Password incorrect.") != -1:
-                    bot.botpass = getpass.getpass("Password: ")
-
-            if bot.state["identify"]:
-                if text.find('+r') != -1:                      
-                    channel_join(bot)
-                if text.find('+v') != -1:
-                    msg_send(bot.irc, bot.channel, "hi")
-                    bot.state["fully_started"] = True
-            else:
-                if text.find("Own a large/active channel") != -1:
-                    channel_join(bot)
-                if text.find("End of /NAMES list.") != -1:
-                    msg_send(bot.irc, bot.channel, "hi")
-                    bot.state["fully_started"] = True
-            continue
-
-        if bot.state["kill"]:
-            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
-                msg_send(bot.irc, bot.channel, "bbl")
-                time.sleep(1)
-                bot.irc.shutdown(0)
-                bot.irc.close()
-                break
-
-        if bot.state["reboot"]:
-            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
-                msg_send(bot.irc, bot.channel, "brb")
-                time.sleep(1)
-                bot.irc.shutdown(0)
-                bot.irc.close()
-                bot.state["connected"] = False
-                bot.state["first_join"] = True
-                bot.state["fully_started"] = False
-                bot.state["identified"] = False
-                bot.state["in_channel"] = False
-                bot.state["reboot"] = False
-
-        if bot.state["fully_started"] and elapsed_time > 60:
-            soup = get_html(bot, bot.searchurl)
-            full = update_info(bot, soup)
-            for i in range(0, len(full)):
-                if not exists_in_old(full[i], old_full) and not bot.state["first_join"]:
-                    msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
-                    time.sleep(1)
-            if bot.state["first_join"]:
-                bot.state["first_join"] = False
-            old_full = full
-            old_time = time.time()
-
-        time.sleep(5)
-
-    return 0
-
-class irc_bot:
-    baseurl = "https://jpmetal.org/showthread.php?tid="
-    loginurl = "https://jpmetal.org/member.php?action=login"
-    searchurl = "https://jpmetal.org/search.php?action=getdaily"
-    statsurl = "https://jpmetal.org/stats.php"
-
-    botnick = ""
-    botpass = ""
-    channel = ""
-    port = ""
-    server = ""
-    ssl = ""
-    br,botpass = mechanize_login(loginurl, botpass)
-    br.submit()
-
-    irc = ""
-
-    state = {
-        "connected" : False,
-        "first_join" : True,
-        "fully_started" : False,
-        "greeter" : True,
-        "identified" : False,
-        "identify" : True,
-        "in_channel" : False,
-        "kill" : False,
-        "ragequits" : 0,
-        "reboot" : False,
-        "ssl" : True,
-        "timeout" : 0,
-        "timestamp" : 0
-    }
 
 if __name__ == "__main__":
     main()
