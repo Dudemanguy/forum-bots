@@ -158,14 +158,15 @@ def check_for_bblquit(bot, user, text):
             msg_send(bot.irc, bot.channel, "bbl "+user)
 
 def check_for_command(bot, user, text):
-    if text.find("."+bot.botnick+" ") != -1:
+    if text.find("."+bot.botnick) != -1:
         raw = text.split(bot.channel)[1][2:]
-        str_split = raw.split(None, 2)
-        if str_split[0] == "."+bot.botnick:
-            if len(str_split) > 1:
-                execute_command(bot, str_split[1:], user)
-            else:
-                execute_command(bot, ["help"], user)
+        if raw == "."+bot.botnick:
+            execute_command(bot, ["help"], user)
+        else:
+            str_split = raw.split(None, 2)
+            if str_split[0] == "."+bot.botnick:
+                if len(str_split) > 1:
+                    execute_command(bot, str_split[1:], user)
 
 def check_for_ragequit(bot, user, text):
     if user.lower() == "jeckidy" and text.find("QUIT") != 1 and text.find(bot.channel) == -1:
