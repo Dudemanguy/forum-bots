@@ -1,3 +1,4 @@
+import argparse
 import getpass
 import http.cookiejar
 import mechanize
@@ -8,127 +9,132 @@ import ssl
 import time
 from bs4 import BeautifulSoup
 
-def channel_join(state, irc, channel):
+def channel_join(bot):
     time.sleep(1)
-    irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
-    state["in_channel"] = True
+    bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
+    bot.state["in_channel"] = True
 
-def check_for_command(state, irc, channel, text):
-    if text.find(".jmfbot ") != -1:
+def check_for_command(bot, text):
+    if text.find("."+bot.botnick+" ") != -1:
         raw = text.split("#jpmetal ")[1][1:]
         str_split = raw.split(None, 2)
-        if str_split[0] == ".jmfbot" and len(str_split) > 1:
-            user = text.split("~")[0][1:]
-            user = user[:len(user)-1]
-            execute_command(state, irc, channel, str_split[1:], user)
+        if str_split[0] == "."+bot.botnick and len(str_split) > 1:
+            user = text.split("!")[0][1:]
+            execute_command(bot, str_split[1:], user)
 
-def check_for_ragequit(state, irc, channel, text):
+def check_for_ragequit(bot, text):
     if len(text.split(":")) == 3:
         subset = text.split(":")[1]
         if subset.find("QUIT") != -1 and subset[:8] == "Jeckidy!":
-            state["ragequits"] += 1
-            msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
+            bot.state["ragequits"] += 1
+            msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
 
-def check_for_user_entry(state, irc, channel, text):
+def check_for_user_entry(bot, text):
     if len(text.split(":")) == 3:
         subset = text.split(":")[1]
         if subset.find("JOIN") != -1:
             user = subset.split("!")[0]
-            msg_send(irc, channel, "hi "+user)
+            if user != bot.botnick:
+                msg_send(bot.irc, bot.channel, "hi "+user)
 
-def execute_command(state, irc, channel, str_split, user):
+def execute_command(bot, str_split, user):
     command = str_split[0]
     arguments = ""
     if len(str_split) > 1:
         arguments = str_split[1]
     if command == "echo" and arguments != "":
-        msg_send(irc, channel, arguments)
+        msg_send(bot.irc, bot.channel, arguments)
     elif command == "help" and arguments == "":
-        msg_send(irc, channel, "Usage: .jmfbot [command] [arguments]")
+        msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
         time.sleep(1)
-        msg_send(irc, channel, "Type '.jmfbot help [command]' for more details about a particular command")
+        msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
         time.sleep(1)
-        msg_send(irc, channel, "Available commands: echo, help, kill, list, random, set, show")
+        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, set, show")
     elif command == "help" and arguments != "":
         if arguments == "echo":
-            msg_send(irc, channel, "echo [message] -- tell the bot echo back a message")
+            msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
         if arguments == "help":
-            msg_send(irc, channel, "help [command (optional)] -- display detailed help output for a particular command")
+            msg_send(bot.irc, bot.channel, "help [command (optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
-            msg_send(irc, channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
+            msg_send(bot.irc, bot.channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
         if arguments == "list":
-            msg_send(irc, channel, "list [actions|properties] -- list all actions/properties with a short description")
+            msg_send(bot.irc, bot.channel, "list [actions|properties] -- list all actions/properties with a short description")
         if arguments == "random":
-            msg_send(irc, channel, "random [action] -- randomize a certain action")
+            msg_send(bot.irc, bot.channel, "random [action] -- randomize a certain action")
         if arguments == "reboot":
-            msg_send(irc, channel, "reboot [timeout (optional)] -- reboot the bot with an optional timeout (channel op only)")
+            msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] -- reboot the bot with an optional timeout (channel op only)")
         if arguments == "set":
-            msg_send(irc, channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
+            msg_send(bot.irc, bot.channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
         if arguments == "show":
-            msg_send(irc, channel, "show [property] -- show the value of one of the bot's properties")
+            msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
     elif command == "kill":
-        if is_op(irc, channel, user):
+        if is_op(bot.irc, bot.channel, user):
             if arguments != "" and only_numbers(arguments):
-                state["timestamp"] = time.time()
-                state["timeout"] = int(arguments)
-                msg_send(irc, channel, "Killing bot in "+arguments+" seconds")
+                bot.state["timestamp"] = time.time()
+                bot.state["timeout"] = int(arguments)
+                msg_send(bot.irc, bot.channel, "Dying in "+arguments+" seconds")
             elif arguments != "" and not only_numbers(arguments):
-                msg_send(irc, channel, "Error: the timeout must be an integer value")
+                msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
                 return
-            state["kill"] = True
+            bot.state["kill"] = True
         else:
-            msg_send(irc, channel, "Only channel ops can kill me.")
+            msg_send(bot.irc, bot.channel, "Only channel ops can kill me.")
     elif command == "list" and arguments != "":
         if arguments == "actions":
-            msg_send(irc, channel, "thread -- retrieve a thread from the forum")
+            msg_send(bot.irc, bot.channel, "thread -- retrieve a thread from the forum")
         elif arguments == "properties":
-            msg_send(irc, channel, "greeter -- greet users on entry (boolean: on/off)")
+            msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
             time.sleep(1)
-            msg_send(irc, channel, "ragequits -- ragequit counter (integer)")
+            msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
-        if is_op(irc, channel, user):
+        if is_op(bot.irc, bot.channel, user):
             if arguments != "" and only_numbers(arguments):
-                state["timestamp"] = time.time()
-                state["timeout"] = int(arguments)
-                msg_send(irc, channel, "Rebooting bot in "+arguments+" seconds")
+                bot.state["timestamp"] = time.time()
+                bot.state["timeout"] = int(arguments)
+                msg_send(bot.irc, bot.channel, "Rebooting in "+arguments+" seconds")
             elif arguments != "" and not only_numbers(arguments):
-                msg_send(irc, channel, "Error: the reboot time must be an integer value")
+                msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
                 return
-            state["reboot"] = True
+            bot.state["reboot"] = True
         else:
-            msg_send(irc, channel, "Only channel ops can reboot me.")
+            msg_send(bot.irc, bot.channel, "Only channel ops can reboot me.")
     elif command == "random" and arguments != "":
         if arguments == "thread":
             # add this mysterious constant that exists for unknown reasons but whatever
-            thread_count = get_thread_count() + 803
+            thread_count = get_thread_count(bot) + 803
             rand_soup = -1
             while rand_soup == -1:
                 time.sleep(1)
                 rand_tid = random.randint(1, thread_count)
-                rand_url = baseurl+str(rand_tid)
-                rand_soup = get_html(rand_url)
+                rand_url = bot.baseurl+str(rand_tid)
+                rand_soup = get_html(bot, rand_url)
             thread_title = rand_soup.find("title").contents[0]
-            msg_send(irc, channel, "Random thread: "+thread_title+" -- "+rand_url)
+            msg_send(bot.irc, bot.channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
-        if not is_op(irc, channel, user):
-            msg_send(irc, channel, "Only channel ops can use the set command.")
+        if not is_op(bot.irc, bot.channel, user):
+            msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
         arguments = arguments.split()
         if arguments[0] == "greeter":
             if arguments[1] == "on":
-                state["greeter"] = True
-                msg_send(irc, channel, "User greeter turned on")
+                bot.state["greeter"] = True
+                msg_send(bot.irc, bot.channel, "User greeter turned on")
             elif arguments[1] == "off":
-                state["greeter"] = False
-                msg_send(irc, channel, "User greeter turned off")
+                bot.state["greeter"] = False
+                msg_send(bot.irc, bot.channel, "User greeter turned off")
         elif arguments[0] == "ragequits":
             if only_numbers(arguments[1]):
                 state["ragequits"] = int(arguments[1])
-                msg_send(irc, channel, "Ragequit counter updated to "+str(state["ragequits"]))
+                msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
             else:
-                msg_send(irc, channel, "Error: ragequits can only be set to an integer value")
+                msg_send(bot.irc, bot.channel, "Error: ragequits can only be set to an integer value")
     elif command == "show" and arguments != "":
+        if arguments == "greeter":
+            if bot.state["greeter"]:
+                msg_send(bot.irc, bot.channel, "User greeter turned on")
+            else:
+                msg_send(bot.irc, bot.channel, "User greeter turned off")
         if arguments == "ragequits":
-            msg_send(irc, channel, "The ragequit counter is at "+str(state["ragequits"]))
+            msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
 
 def exists_in_old(item, old_full):
     for i in range(0, len(old_full)):
@@ -136,9 +142,9 @@ def exists_in_old(item, old_full):
             return True
     return False
 
-def get_html(url):
+def get_html(bot, url):
     try:
-        html = br.open(url).read()
+        html = bot.br.open(url).read()
         soup = BeautifulSoup(html, "html.parser")
         return soup
     except:
@@ -148,14 +154,14 @@ def get_response(irc):
     resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
     return resp
 
-def get_thread_count():
-    soup = get_html(statsurl)
+def get_thread_count(bot):
+    soup = get_html(bot, bot.statsurl)
     return int(soup.find_all("td")[3].find_all("strong")[1].contents[0].replace(",",""))
 
-def identify_name(state, irc, text, botpass):
+def identify_name(bot, text):
     if text.find('PING') != -1:
-        irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+botpass+"\r\n", "UTF-8"))
-        state["identified"] = True
+        bot.irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+bot.botpass+"\r\n", "UTF-8"))
+        bot.state["identified"] = True
 
 def is_op(irc, channel, user):
     irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
@@ -165,6 +171,26 @@ def is_op(irc, channel, user):
         if i[0] == "@" and user == i[1:]:
             return True
     return False
+
+def mechanize_login(loginurl, botpass):
+    cj = http.cookiejar.CookieJar()
+
+    br = mechanize.Browser()
+    br.set_cookiejar(cj)
+    br.set_handle_equiv(True)
+    br.set_handle_gzip(True)
+    br.set_handle_redirect(True)
+    br.set_handle_referer(True)
+    br.set_handle_robots(False)
+    br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
+    br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0')]
+
+    br.open(loginurl)
+    br.select_form(nr=1)
+    br.form['username'] = input("Username: ")
+    br.form['password'] = getpass.getpass("Password: ")
+    botpass = br.form['password']
+    return br,botpass
 
 def msg_send(irc, channel, msg):
     irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
@@ -188,7 +214,7 @@ def server_connect(irc, server, port, botnick):
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
     time.sleep(5)
 
-def update_info(soup):
+def update_info(bot, soup):
     poster = []
     thread = []
     time = []
@@ -207,121 +233,151 @@ def update_info(soup):
             time.append(poster_names[i].contents[2][2:])
     for i in range(len(thread_names)-1, -1, -1):
         thread_id = thread_names[i].get('id')[4:]
-        url.append(baseurl+thread_id+"&action=lastpost")
+        url.append(bot.baseurl+thread_id+"&action=lastpost")
     full = []
     for i in range(len(poster)):
         full.append([poster[i], thread[i], time[i], url[i]])
     return full
 
-baseurl = "https://jpmetal.org/showthread.php?tid="
-loginurl = "https://jpmetal.org/member.php?action=login"
-searchurl = "https://jpmetal.org/search.php?action=getdaily"
-statsurl = "https://jpmetal.org/stats.php"
-cj = http.cookiejar.CookieJar()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--botnick", type=str, default="jmfbot", nargs='?', const=1, help="bot nickname")
+    parser.add_argument("--channel", type=str, default="#jpmetal", nargs='?', const=1, help="channel to join")
+    parser.add_argument("--identify", type=int, default=1, help="identify name to server")
+    parser.add_argument("--server", type=str, default="irc.rizon.net", nargs='?', const=1, help="server to use")
+    parser.add_argument("--ssl", type=int, default=1, help="use ssl")
+    args = parser.parse_args()
+    
+    bot = irc_bot()
 
-br = mechanize.Browser()
-br.set_cookiejar(cj)
-br.set_handle_equiv(True)
-br.set_handle_gzip(True)
-br.set_handle_redirect(True)
-br.set_handle_referer(True)
-br.set_handle_robots(False)
-br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
-br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0')]
+    bot.botnick = args.botnick
+    bot.channel = args.channel
+    bot.server = args.server
+    
+    if args.identify == 0:
+        bot.state["identify"] = False
+    else:
+        bot.state["identify"] = True
 
-br.open(loginurl)
-br.select_form(nr=1)
-br.form['username'] = input("Username: ")
-br.form['password'] = getpass.getpass("Password: ")
-botpass = br.form['password']
-br.submit()
+    if args.ssl == 0:
+        bot.state["ssl"] = False
+        bot.port = 6667
+    else:
+        bot.state["ssl"] = True
+        bot.port = 6697
 
-server = "irc.rizon.net"
-port = 6697
-channel = "#jpmetal"
-botnick = "JMFbot"
-irc = socket.socket()
-irc = ssl.wrap_socket(irc)
+    old_full = []
+    old_time = 0
 
-server_connect(irc, server, port, botnick)
-state = {
-    "connected" : True,
-    "first_join" : True,
-    "fully_started" : False,
-    "greeter" : True,
-    "identified" : False,
-    "in_channel" : False,
-    "kill" : False,
-    "ragequits" : 0,
-    "reboot" : False,
-    "timeout" : 0,
-    "timestamp" : 0
-}
-old_full = []
-old_time = 0
+    while True:
+        if not bot.state["connected"]:
+            bot.irc = socket.socket()
+            if bot.state["ssl"]:
+                bot.irc = ssl.wrap_socket(bot.irc)
+            server_connect(bot.irc, bot.server, bot.port, bot.botnick)
+            bot.state["connected"] = True
 
-while True:
-    if not state["connected"]:
-        irc = socket.socket()
-        irc = ssl.wrap_socket(irc)
-        server_connect(irc, server, port, botnick)
-        state["connected"] = True
+        if bot.state["connected"]:
+            text = get_response(bot.irc)
+            print(text)
 
-    if state["connected"]:
-        text = get_response(irc)
-        print(text)
+        elapsed_time = time.time() - old_time
 
-    elapsed_time = time.time() - old_time
+        reply_pong(bot.irc, text)
 
-    reply_pong(irc, text)
+        if not bot.state["fully_started"]:
+            if not bot.state["identified"] and bot.state["identify"]:
+                identify_name(bot, text)
 
-    if not state["fully_started"]:
-        if not state["identified"]:
-            identify_name(state, irc, text, botpass)
+            if bot.state["identify"]:
+                if text.find('+r') != -1:                      
+                    channel_join(bot)
+                if text.find('+v') != -1:
+                    msg_send(bot.irc, bot.channel, "hi")
+                    bot.state["fully_started"] = True
+            else:
+                if text.find("Own a large/active channel") != -1:
+                    channel_join(bot)
+                if text.find("End of /NAMES list.") != -1:
+                    msg_send(bot.irc, bot.channel, "hi")
+                    bot.state["fully_started"] = True
+            continue
 
-        if text.find('+r') != -1:                      
-            channel_join(state, irc, channel)
+        check_for_command(bot, text)
+        check_for_ragequit(bot, text)
 
-        if text.find('+v') != -1:
-            msg_send(irc, channel, "hi")
-            state["fully_started"] = True
-        continue
-
-    check_for_command(state, irc, channel, text)
-    check_for_ragequit(state, irc, channel, text)
-
-    if state["kill"]:
-        if time.time() >= state["timestamp"] + state["timeout"]:
-            msg_send(irc, channel, "bbl")
-            irc.shutdown(0)
-            irc.close()
-            break
-
-    if state["reboot"]:
-        if time.time() >= state["timestamp"] + state["timeout"]:
-            msg_send(irc, channel, "brb")
-            irc.shutdown(0)
-            irc.close()
-            state["connected"] = False
-            state["first_join"] = True
-            state["fully_started"] = False
-            state["identified"] = False
-            state["in_channel"] = False
-            state["reboot"] = False
-
-    if state["greeter"]:
-        check_for_user_entry(state, irc, channel, text)
-
-    if state["fully_started"] and elapsed_time > 60:
-        soup = get_html(searchurl)
-        full = update_info(soup)
-        for i in range(0, len(full)):
-            if not exists_in_old(full[i], old_full) and not state["first_join"]:
-                msg_send(irc, channel, "[jmfbot] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
+        if bot.state["kill"]:
+            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                msg_send(bot.irc, bot.channel, "bbl")
                 time.sleep(1)
-        if state["first_join"]:
-            state["first_join"] = False
-        old_full = full
-        old_time = time.time()
+                bot.irc.shutdown(0)
+                bot.irc.close()
+                break
 
-    time.sleep(5)
+        if bot.state["reboot"]:
+            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                msg_send(bot.irc, bot.channel, "brb")
+                time.sleep(1)
+                bot.irc.shutdown(0)
+                bot.irc.close()
+                bot.state["connected"] = False
+                bot.state["first_join"] = True
+                bot.state["fully_started"] = False
+                bot.state["identified"] = False
+                bot.state["in_channel"] = False
+                bot.state["reboot"] = False
+
+        if bot.state["greeter"]:
+            check_for_user_entry(bot, text)
+
+        if bot.state["fully_started"] and elapsed_time > 60:
+            soup = get_html(bot, bot.searchurl)
+            full = update_info(bot, soup)
+            for i in range(0, len(full)):
+                if not exists_in_old(full[i], old_full) and not bot.state["first_join"]:
+                    msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
+                    time.sleep(1)
+            if bot.state["first_join"]:
+                bot.state["first_join"] = False
+            old_full = full
+            old_time = time.time()
+
+        time.sleep(5)
+
+    return 0
+
+class irc_bot:
+    baseurl = "https://jpmetal.org/showthread.php?tid="
+    loginurl = "https://jpmetal.org/member.php?action=login"
+    searchurl = "https://jpmetal.org/search.php?action=getdaily"
+    statsurl = "https://jpmetal.org/stats.php"
+
+    botnick = ""
+    botpass = ""
+    channel = ""
+    port = ""
+    server = ""
+    ssl = ""
+    br,botpass = mechanize_login(loginurl, botpass)
+    br.submit()
+
+    irc = ""
+
+    state = {
+        "connected" : False,
+        "first_join" : True,
+        "fully_started" : False,
+        "greeter" : True,
+        "identified" : False,
+        "identify" : True,
+        "in_channel" : False,
+        "kill" : False,
+        "ragequits" : 0,
+        "reboot" : False,
+        "ssl" : True,
+        "timeout" : 0,
+        "timestamp" : 0
+    }
+
+if __name__ == "__main__":
+    main()
