@@ -7,6 +7,7 @@ import mechanize
 import os
 import random
 import re
+import select
 import socket
 import ssl
 import time
@@ -29,7 +30,6 @@ class irc_bot():
     irc = ""
 
     state = {
-        "connected" : False,
         "first_join" : True,
         "fully_started" : False,
         "greeter" : True,
@@ -77,21 +77,26 @@ def main():
         bot.port = 6697
 
     old_full = []
-    old_time = 0
+    bot.irc = socket.socket()
+    if bot.state["ssl"]:
+        bot.irc = ssl.wrap_socket(bot.irc)
+    server_connect(bot.irc, bot.server, bot.port, bot.botnick)
+
+    poller = select.poll()
+    poller.register(bot.irc, select.POLLIN)
+    fd_to_socket = {bot.irc.fileno(): bot.irc,}
+
+    finish_time = time.time() + 60
+    timeout = 60*1000
 
     while True:
-        if not bot.state["connected"]:
-            bot.irc = socket.socket()
-            if bot.state["ssl"]:
-                bot.irc = ssl.wrap_socket(bot.irc)
-            server_connect(bot.irc, bot.server, bot.port, bot.botnick)
-            bot.state["connected"] = True
-
-        if bot.state["connected"]:
-            text = get_response(bot.irc)
+        current_time = time.time()
+        if current_time < finish_time:
+            timeout = (finish_time - current_time)*1000
+        events = poller.poll(timeout)
+        text = get_response(bot.irc)
+        if text != "":
             print(text)
-
-        elapsed_time = time.time() - old_time
 
         check_text(bot, text)
 
@@ -113,7 +118,6 @@ def main():
                 if text.find("End of /NAMES list.") != -1:
                     msg_send(bot.irc, bot.channel, "hi")
                     bot.state["fully_started"] = True
-            continue
 
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
@@ -129,10 +133,10 @@ def main():
                 time.sleep(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
-                os.execl("./jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass, "--channel="+bot.channel,
+                os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass, "--channel="+bot.channel,
                          "--identify="+str(args.identify), "--server="+bot.server, "--ssl="+str(args.ssl))
 
-        if bot.state["fully_started"] and elapsed_time > 60:
+        if bot.state["fully_started"] and time.time() >= finish_time:
             soup = get_html(bot, bot.searchurl)
             full = update_info(bot, soup)
             for i in range(0, len(full)):
@@ -142,9 +146,7 @@ def main():
             if bot.state["first_join"]:
                 bot.state["first_join"] = False
             old_full = full
-            old_time = time.time()
-
-        time.sleep(5)
+            finish_time = time.time() + 60
 
     return 0
 
@@ -181,7 +183,9 @@ def check_for_user_entry(bot, user, text):
                 msg_send(bot.irc, bot.channel, "hi "+user)
 
 def check_text(bot, text):
-    if text[:4] == "PING":
+    if text == "":
+        return
+    elif text[:4] == "PING":
         reply_pong(bot.irc, text)
     else:
         user = get_user(text)
