@@ -106,7 +106,7 @@ def main():
                 if text.find("Password incorrect.") != -1:
                     bot.botpass = getpass.getpass("Password: ")
 
-            if bot.state["identify"]:
+            if bot.state["identified"]:
                 if text.find('+r') != -1:                      
                     channel_join(bot)
                 if text.find('+v') != -1:
