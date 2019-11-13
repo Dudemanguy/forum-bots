@@ -95,7 +95,7 @@ def main():
         current_time = time.time()
         if current_time < finish_time:
             timeout = (finish_time - current_time)*1000
-        events = bot.poller.poll(timeout)
+        bot.poller.poll(timeout)
         text = get_response(bot.irc)
         if text != "":
             print(text)
