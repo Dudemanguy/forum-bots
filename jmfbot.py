@@ -23,6 +23,7 @@ class irc_bot():
     botpass = ""
     br = ""
     channel = ""
+    names = []
     port = ""
     server = ""
     ssl = ""
@@ -38,6 +39,7 @@ class irc_bot():
         "identify" : True,
         "in_channel" : False,
         "kill" : False,
+        "op-only": False,
         "ragequits" : 0,
         "reboot" : False,
         "ssl" : True,
@@ -112,12 +114,14 @@ def main():
                 if text.find('+r') != -1:                      
                     channel_join(bot)
                 if text.find('+v') != -1:
+                    get_names(bot)
                     msg_send(bot.irc, bot.channel, "hi")
                     bot.state["fully_started"] = True
             else:
                 if text.find("Own a large/active channel") != -1:
                     channel_join(bot)
                 if text.find("End of /NAMES list.") != -1:
+                    get_names(bot)
                     msg_send(bot.irc, bot.channel, "hi")
                     bot.state["fully_started"] = True
 
@@ -158,10 +162,12 @@ def channel_join(bot):
 def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[1][2:]
-        if substring == "bbl":
+        if substring == "bbl" and bot.state["greeter"]:
             msg_send(bot.irc, bot.channel, "bbl "+user)
 
 def check_for_command(bot, user, text):
+    if bot.state["op-only"] and not is_op(bot, user):
+        return
     if text.find("."+bot.botnick) != -1:
         raw = text.split(bot.channel)[1][2:]
         if raw == "."+bot.botnick:
@@ -181,7 +187,15 @@ def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[0]
         if substring.find("JOIN") != -1 and user != bot.botnick:
-                msg_send(bot.irc, bot.channel, "hi "+user)
+                bot.names.append(user)
+                if bot.state["greeter"]:
+                    msg_send(bot.irc, bot.channel, "hi "+user)
+
+def check_for_user_exit(bot, user, text):
+    if text.find("QUIT") != 1 and text.find(bot.channel) == -1:
+        bot.names.remove(user)
+        bot.names.remove("+"+user)
+        bot.names.remove("@"+user)
 
 def check_text(bot, text):
     if text == "":
@@ -193,9 +207,8 @@ def check_text(bot, text):
         if user != None:
             check_for_command(bot, user, text)
             check_for_ragequit(bot, user, text)
-            if bot.state["greeter"]:
-                check_for_bblquit(bot, user, text)
-                check_for_user_entry(bot, user, text)
+            check_for_bblquit(bot, user, text)
+            check_for_user_entry(bot, user, text)
 
 def execute_command(bot, str_split, user):
     command = str_split[0]
@@ -242,6 +255,7 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "thread -- retrieve a thread from the forum")
         elif arguments == "properties":
             msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
+            msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
             msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
         if is_op(bot, user):
@@ -269,6 +283,7 @@ def execute_command(bot, str_split, user):
     elif command == "set" and arguments != "":
         if not is_op(bot, user):
             msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
+            return
         arguments = arguments.split()
         if arguments[0] == "greeter":
             if arguments[1] == "on":
@@ -277,6 +292,13 @@ def execute_command(bot, str_split, user):
             elif arguments[1] == "off":
                 bot.state["greeter"] = False
                 msg_send(bot.irc, bot.channel, "User greeter turned off")
+        elif arguments[0] == "op-only":
+            if arguments[1] == "on":
+                bot.state["op-only"] = True
+                msg_send(bot.irc, bot.channel, "Only listening to commands from channel ops")
+            elif arguments[1] == "off":
+                bot.state["op-only"] = False
+                msg_send(bot.irc, bot.channel, "Listening to commands from all users")
         elif arguments[0] == "ragequits":
             if only_numbers(arguments[1]):
                 bot.state["ragequits"] = int(arguments[1])
@@ -289,7 +311,7 @@ def execute_command(bot, str_split, user):
                 msg_send(bot.irc, bot.channel, "User greeter turned on")
             else:
                 msg_send(bot.irc, bot.channel, "User greeter turned off")
-        if arguments == "ragequits":
+        elif arguments == "ragequits":
             msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
 
 def exists_in_old(item, old_full):
@@ -305,6 +327,12 @@ def get_html(bot, url):
         return soup
     except:
         return -1
+
+def get_names(bot):
+    bot.irc.send(bytes("NAMES " + bot.channel + "\n", "UTF-8"))
+    bot.poller.poll()
+    names = get_response(bot.irc)
+    bot.names = names.split()
 
 def get_response(irc):
     try:
@@ -327,11 +355,7 @@ def identify_name(bot, text):
         bot.state["identified"] = True
 
 def is_op(bot, user):
-    bot.irc.send(bytes("NAMES " + bot.channel + "\n", "UTF-8"))
-    bot.poller.poll()
-    names = get_response(bot.irc)
-    names = names.split()
-    for i in names:
+    for i in bot.names:
         if i[0] == "@" and user == i[1:]:
             return True
     return False
