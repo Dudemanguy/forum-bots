@@ -28,6 +28,7 @@ class irc_bot():
     ssl = ""
 
     irc = ""
+    poller = ""
 
     state = {
         "first_join" : True,
@@ -82,18 +83,19 @@ def main():
         bot.irc = ssl.wrap_socket(bot.irc)
     server_connect(bot.irc, bot.server, bot.port, bot.botnick)
 
-    poller = select.poll()
-    poller.register(bot.irc, select.POLLIN)
-    fd_to_socket = {bot.irc.fileno(): bot.irc,}
+    bot.poller = select.poll()
+    bot.poller.register(bot.irc, select.POLLIN)
 
     finish_time = time.time() + 60
     timeout = 60*1000
+
+    bot.irc.setblocking(0)
 
     while True:
         current_time = time.time()
         if current_time < finish_time:
             timeout = (finish_time - current_time)*1000
-        events = poller.poll(timeout)
+        events = bot.poller.poll(timeout)
         text = get_response(bot.irc)
         if text != "":
             print(text)
@@ -122,6 +124,7 @@ def main():
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 msg_send(bot.irc, bot.channel, "bbl")
+                bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
                 break
@@ -129,6 +132,7 @@ def main():
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 msg_send(bot.irc, bot.channel, "brb")
+                bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass, "--channel="+bot.channel,
@@ -222,7 +226,7 @@ def execute_command(bot, str_split, user):
         if arguments == "show":
             msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
     elif command == "kill":
-        if is_op(bot.irc, bot.channel, user):
+        if is_op(bot, user):
             if arguments != "" and only_numbers(arguments):
                 bot.state["timestamp"] = time.time()
                 bot.state["timeout"] = int(arguments)
@@ -240,7 +244,7 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
             msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
-        if is_op(bot.irc, bot.channel, user):
+        if is_op(bot, user):
             if arguments != "" and only_numbers(arguments):
                 bot.state["timestamp"] = time.time()
                 bot.state["timeout"] = int(arguments)
@@ -263,7 +267,7 @@ def execute_command(bot, str_split, user):
             thread_title = rand_soup.find("title").contents[0]
             msg_send(bot.irc, bot.channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
-        if not is_op(bot.irc, bot.channel, user):
+        if not is_op(bot, user):
             msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
         arguments = arguments.split()
         if arguments[0] == "greeter":
@@ -303,8 +307,11 @@ def get_html(bot, url):
         return -1
 
 def get_response(irc):
-    resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
-    return resp
+    try:
+        resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
+        return resp
+    except:
+        return ""
 
 def get_thread_count(bot):
     soup = get_html(bot, bot.statsurl)
@@ -319,9 +326,10 @@ def identify_name(bot, text):
         bot.irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+bot.botpass+"\r\n", "UTF-8"))
         bot.state["identified"] = True
 
-def is_op(irc, channel, user):
-    irc.send(bytes("NAMES " + channel + "\n", "UTF-8"))
-    names = get_response(irc)
+def is_op(bot, user):
+    bot.irc.send(bytes("NAMES " + bot.channel + "\n", "UTF-8"))
+    bot.poller.poll()
+    names = get_response(bot.irc)
     names = names.split()
     for i in names:
         if i[0] == "@" and user == i[1:]:
