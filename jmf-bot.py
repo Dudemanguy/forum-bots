@@ -18,9 +18,12 @@ def check_for_command(bot, text):
     if text.find("."+bot.botnick+" ") != -1:
         raw = text.split("#jpmetal ")[1][1:]
         str_split = raw.split(None, 2)
-        if str_split[0] == "."+bot.botnick and len(str_split) > 1:
+        if str_split[0] == "."+bot.botnick:
             user = text.split("!")[0][1:]
-            execute_command(bot, str_split[1:], user)
+            if len(str_split) > 1:
+                execute_command(bot, str_split[1:], user)
+            else:
+                execute_command(bot, ["help"], user)
 
 def check_for_ragequit(bot, text):
     if len(text.split(":")) == 3:
