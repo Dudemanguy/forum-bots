@@ -153,6 +153,12 @@ def channel_join(bot):
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
     bot.state["in_channel"] = True
 
+def check_for_bblquit(bot, user, text):
+    if text.find(bot.channel) != -1:
+        substring = text.split(bot.channel)[1][2:]
+        if substring == "bbl":
+            msg_send(bot.irc, bot.channel, "bbl "+user)
+
 def check_for_command(bot, user, text):
     if text.find("."+bot.botnick+" ") != -1:
         raw = text.split(bot.channel)[1][2:]
@@ -183,6 +189,7 @@ def check_text(bot, text):
             check_for_command(bot, user, text)
             check_for_ragequit(bot, user, text)
             if bot.state["greeter"]:
+                check_for_bblquit(bot, user, text)
                 check_for_user_entry(bot, user, text)
 
 def execute_command(bot, str_split, user):
