@@ -122,7 +122,6 @@ def main():
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 msg_send(bot.irc, bot.channel, "bbl")
-                time.sleep(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
                 break
@@ -130,7 +129,6 @@ def main():
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 msg_send(bot.irc, bot.channel, "brb")
-                time.sleep(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass, "--channel="+bot.channel,
@@ -142,7 +140,6 @@ def main():
             for i in range(0, len(full)):
                 if not exists_in_old(full[i], old_full) and not bot.state["first_join"]:
                     msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
-                    time.sleep(1)
             if bot.state["first_join"]:
                 bot.state["first_join"] = False
             old_full = full
@@ -151,7 +148,6 @@ def main():
     return 0
 
 def channel_join(bot):
-    time.sleep(1)
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
     bot.state["in_channel"] = True
 
@@ -205,9 +201,7 @@ def execute_command(bot, str_split, user):
         msg_send(bot.irc, bot.channel, arguments)
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
-        time.sleep(1)
         msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
-        time.sleep(1)
         msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, set, show")
     elif command == "help" and arguments != "":
         if arguments == "echo":
@@ -243,7 +237,6 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "thread -- retrieve a thread from the forum")
         elif arguments == "properties":
             msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
-            time.sleep(1)
             msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
         if is_op(bot.irc, bot.channel, user):
@@ -263,7 +256,6 @@ def execute_command(bot, str_split, user):
             thread_count = get_thread_count(bot) + 803
             rand_soup = -1
             while rand_soup == -1:
-                time.sleep(1)
                 rand_tid = random.randint(1, thread_count)
                 rand_url = bot.baseurl+str(rand_tid)
                 rand_soup = get_html(bot, rand_url)
@@ -378,7 +370,6 @@ def server_connect(irc, server, port, botnick):
     irc.connect((server, port))
     irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
-    time.sleep(5)
 
 def update_info(bot, soup):
     poster = []
