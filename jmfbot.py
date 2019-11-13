@@ -14,31 +14,37 @@ def channel_join(bot):
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
     bot.state["in_channel"] = True
 
-def check_for_command(bot, text):
+def check_for_command(bot, user, text):
     if text.find("."+bot.botnick+" ") != -1:
-        raw = text.split("#jpmetal ")[1][1:]
+        raw = text.split(bot.channel)[1][2:]
         str_split = raw.split(None, 2)
         if str_split[0] == "."+bot.botnick:
-            user = text.split("!")[0][1:]
             if len(str_split) > 1:
                 execute_command(bot, str_split[1:], user)
             else:
                 execute_command(bot, ["help"], user)
 
-def check_for_ragequit(bot, text):
-    if len(text.split(":")) == 3:
-        subset = text.split(":")[1]
-        if subset.find("QUIT") != -1 and subset[:8] == "Jeckidy!":
-            bot.state["ragequits"] += 1
-            msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
+def check_for_ragequit(bot, user, text):
+    if user.lower() == "jeckidy" and text.find("QUIT") != 1 and text.find(bot.channel) == -1:
+        bot.state["ragequits"] += 1
+        msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
 
-def check_for_user_entry(bot, text):
-    if len(text.split(":")) == 3:
-        subset = text.split(":")[1]
-        if subset.find("JOIN") != -1:
-            user = subset.split("!")[0]
-            if user != bot.botnick:
+def check_for_user_entry(bot, user, text):
+    if text.find(bot.channel) != -1:
+        substring = text.split(bot.channel)[0]
+        if substring.find("JOIN") != -1 and user != bot.botnick:
                 msg_send(bot.irc, bot.channel, "hi "+user)
+
+def check_text(bot, text):
+    if text[:4] == "PING":
+        reply_pong(bot.irc, text)
+    else:
+        user = get_user(text)
+        if user != None:
+            check_for_command(bot, user, text)
+            check_for_ragequit(bot, user, text)
+            if bot.state["greeter"]:
+                check_for_user_entry(bot, user, text)
 
 def execute_command(bot, str_split, user):
     command = str_split[0]
@@ -126,7 +132,7 @@ def execute_command(bot, str_split, user):
                 msg_send(bot.irc, bot.channel, "User greeter turned off")
         elif arguments[0] == "ragequits":
             if only_numbers(arguments[1]):
-                state["ragequits"] = int(arguments[1])
+                bot.state["ragequits"] = int(arguments[1])
                 msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
             else:
                 msg_send(bot.irc, bot.channel, "Error: ragequits can only be set to an integer value")
@@ -160,6 +166,10 @@ def get_response(irc):
 def get_thread_count(bot):
     soup = get_html(bot, bot.statsurl)
     return int(soup.find_all("td")[3].find_all("strong")[1].contents[0].replace(",",""))
+
+def get_user(text):
+    if text.find("!") != -1:
+        return text.split("!")[0][1:]
 
 def identify_name(bot, text):
     if text.find('PING') != -1:
@@ -205,10 +215,9 @@ def only_numbers(string):
     return True
 
 def reply_pong(irc, text):
-    if text.find('PING') != -1:                      
-        for i in range(len(text.split())):
-            if text.split()[i] == "PING":
-                irc.send(bytes('PONG '+text.split()[i+1]+'\r\n', "UTF-8"))
+    for i in range(len(text.split())):
+        if text.split()[i] == "PING":
+            irc.send(bytes('PONG '+text.split()[i+1]+'\r\n', "UTF-8"))
 
 def server_connect(irc, server, port, botnick):
     print("Connecting to: " + server)
@@ -286,11 +295,13 @@ def main():
 
         elapsed_time = time.time() - old_time
 
-        reply_pong(bot.irc, text)
+        check_text(bot, text)
 
         if not bot.state["fully_started"]:
             if not bot.state["identified"] and bot.state["identify"]:
                 identify_name(bot, text)
+                if text.find("Password incorrect.") != -1:
+                    bot.botpass = getpass.getpass("Password: ")
 
             if bot.state["identify"]:
                 if text.find('+r') != -1:                      
@@ -305,9 +316,6 @@ def main():
                     msg_send(bot.irc, bot.channel, "hi")
                     bot.state["fully_started"] = True
             continue
-
-        check_for_command(bot, text)
-        check_for_ragequit(bot, text)
 
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
@@ -329,9 +337,6 @@ def main():
                 bot.state["identified"] = False
                 bot.state["in_channel"] = False
                 bot.state["reboot"] = False
-
-        if bot.state["greeter"]:
-            check_for_user_entry(bot, text)
 
         if bot.state["fully_started"] and elapsed_time > 60:
             soup = get_html(bot, bot.searchurl)
