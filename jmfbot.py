@@ -91,6 +91,7 @@ def main():
     finish_time = time.time() + 60
     timeout = 60*1000
 
+    bot.names.append(bot.botnick)
     bot.irc.setblocking(0)
 
     while True:
@@ -186,11 +187,21 @@ def check_for_ragequit(bot, user, text):
 def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[0]
-        if substring.find("JOIN") != -1 and user != bot.botnick:
-                print(user)
-                bot.names.append(user)
-                if bot.state["greeter"]:
-                    msg_send(bot.irc, bot.channel, "hi "+user)
+        if substring.find("JOIN") != -1:
+            bot.names.append(user)
+            if bot.state["greeter"] and user != bot.botnick:
+                msg_send(bot.irc, bot.channel, "hi "+user)
+
+def check_for_user_mode(bot, user, text):
+    if user == "JNET" and text.find("MODE") != -1:
+        if len(text.split("+v ")) > 1:
+            name = text.split("+v ")[1]
+            bot.names.remove(name)
+            bot.names.append("+"+name)
+        if len(text.split("+o ")) > 1:
+            name = text.split("+o ")[1]
+            bot.names.remove(name)
+            bot.names.append("@"+name)
 
 def check_for_user_exit(bot, user, text):
     if text.find("QUIT") != 1 and text.find(bot.channel) == -1:
@@ -210,6 +221,7 @@ def check_text(bot, text):
             check_for_ragequit(bot, user, text)
             check_for_bblquit(bot, user, text)
             check_for_user_entry(bot, user, text)
+            check_for_user_mode(bot, user, text)
 
 def execute_command(bot, str_split, user):
     command = str_split[0]
