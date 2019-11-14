@@ -134,7 +134,7 @@ def main():
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 with open("bot_state.txt", "w") as json_file:
-                    json.dump(bot.state,, json_file)
+                    json.dump(bot.state, json_file)
                 msg_send(bot.irc, bot.channel, "bbl")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
@@ -144,7 +144,7 @@ def main():
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 with open("bot_state.txt", "w") as json_file:
-                    json.dump(bot.state,, json_file)
+                    json.dump(bot.state, json_file)
                 msg_send(bot.irc, bot.channel, "brb")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
