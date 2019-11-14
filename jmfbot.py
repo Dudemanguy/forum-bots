@@ -3,6 +3,7 @@
 import argparse
 import getpass
 import http.cookiejar
+import json
 import mechanize
 import os
 import random
@@ -80,6 +81,10 @@ def main():
         bot.state["ssl"] = True
         bot.port = 6697
 
+    if os.path.isfile("bot_state.txt"):
+        with open("bot_state.txt") as f:
+            bot.state = json.load(f)
+
     old_full = []
     bot.irc = socket.socket()
     if bot.state["ssl"]:
@@ -128,6 +133,8 @@ def main():
 
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                with open("bot_state.txt", "w") as json_file:
+                    json.dump(bot.state,, json_file)
                 msg_send(bot.irc, bot.channel, "bbl")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
@@ -136,12 +143,13 @@ def main():
 
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                with open("bot_state.txt", "w") as json_file:
+                    json.dump(bot.state,, json_file)
                 msg_send(bot.irc, bot.channel, "brb")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
-                os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass, "--channel="+bot.channel,
-                         "--identify="+str(args.identify), "--server="+bot.server, "--ssl="+str(args.ssl))
+                os.execl("jmfbot.py"))
 
         if bot.state["fully_started"] and time.time() >= finish_time:
             soup = get_html(bot, bot.searchurl)
