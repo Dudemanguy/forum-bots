@@ -187,6 +187,7 @@ def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[0]
         if substring.find("JOIN") != -1 and user != bot.botnick:
+                print(user)
                 bot.names.append(user)
                 if bot.state["greeter"]:
                     msg_send(bot.irc, bot.channel, "hi "+user)
@@ -220,7 +221,7 @@ def execute_command(bot, str_split, user):
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, reboot, set, show")
+        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, reboot, set, show, update")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
@@ -233,11 +234,13 @@ def execute_command(bot, str_split, user):
         if arguments == "random":
             msg_send(bot.irc, bot.channel, "random [action] -- randomize a certain action")
         if arguments == "reboot":
-            msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] ['update' (optional)] -- reboot the bot with an optional timeout and optional update (channel op only)")
+            msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
         if arguments == "set":
             msg_send(bot.irc, bot.channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
         if arguments == "show":
             msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
+        if arguments == "update":
+            msg_send(bot.irc, bot.channel, "update -- pull the latest changes from git (channel op only)")
     elif command == "kill":
         if is_op(bot, user):
             if arguments != "" and only_numbers(arguments):
@@ -259,16 +262,11 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
         if is_op(bot, user):
-            arguments = arguments.split()
-            if len(arguments) > 1 and arguments[1] == "update":
-                os.execl("git", "pull")
-            elif len(arguments) > 1 and arguments[1] != "update":
-                msg_send(bot.irc, bot.channel, "Error: invalid argument")
-            if arguments[0] != "" and only_numbers(arguments[0]):
+            if arguments != "" and only_numbers(arguments):
                 bot.state["timestamp"] = time.time()
                 bot.state["timeout"] = int(arguments[0])
                 msg_send(bot.irc, bot.channel, "Rebooting in "+arguments[0]+" seconds")
-            elif arguments[0] != "" and not only_numbers(arguments[0]):
+            elif arguments != "" and not only_numbers(arguments):
                 msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
                 return
             bot.state["reboot"] = True
@@ -323,6 +321,12 @@ def execute_command(bot, str_split, user):
                 msg_send(bot.irc, bot.channel, "op-only is turned off")
         elif arguments == "ragequits":
             msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
+    elif command == "update" and arguments == "":
+        if not is_op(bot, user):
+            msg_send(bot.irc, bot.channel, "Only channel ops can use the update command.")
+            return
+        msg_send(bot.irc, bot.channel, "Pulling the latest changes from git")
+        os.system("git pull")
 
 def exists_in_old(item, old_full):
     for i in range(0, len(old_full)):
