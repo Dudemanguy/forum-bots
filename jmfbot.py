@@ -208,6 +208,10 @@ def check_for_user_exit(bot, user, text):
         bot.names.remove(user)
         bot.names.remove("+"+user)
         bot.names.remove("@"+user)
+    if text.find("PART") != 1 and text.find(bot.channel) == -1:
+        bot.names.remove(user)
+        bot.names.remove("+"+user)
+        bot.names.remove("@"+user)
 
 def check_text(bot, text):
     if text == "":
