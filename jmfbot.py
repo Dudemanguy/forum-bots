@@ -165,8 +165,8 @@ def check_for_bblquit(bot, user, text):
         substring = text.split(bot.channel)[1][2:]
         if substring == "bbl" and bot.state["greeter"]:
             chance = random.randint(1, 100)
-            if chance > 65:
-                msg_sent(bot.irc, bot.channel, "fuck off "+user)
+            if chance > 55:
+                msg_send(bot.irc, bot.channel, "fuck off "+user)
             else:
                 msg_send(bot.irc, bot.channel, "bbl "+user)
 
