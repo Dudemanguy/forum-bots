@@ -233,7 +233,7 @@ def execute_command(bot, str_split, user):
         if arguments == "random":
             msg_send(bot.irc, bot.channel, "random [action] -- randomize a certain action")
         if arguments == "reboot":
-            msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] -- reboot the bot with an optional timeout (channel op only)")
+            msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] ['update' (optional)] -- reboot the bot with an optional timeout and optional update (channel op only)")
         if arguments == "set":
             msg_send(bot.irc, bot.channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
         if arguments == "show":
@@ -259,11 +259,16 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "reboot":
         if is_op(bot, user):
-            if arguments != "" and only_numbers(arguments):
+            arguments = arguments.split()
+            if len(arguments) > 1 and arguments[1] == "update":
+                os.execl("git", "pull")
+            elif len(arguments) > 1 and arguments[1] != "update":
+                msg_send(bot.irc, bot.channel, "Error: invalid argument")
+            if arguments[0] != "" and only_numbers(arguments[0]):
                 bot.state["timestamp"] = time.time()
-                bot.state["timeout"] = int(arguments)
-                msg_send(bot.irc, bot.channel, "Rebooting in "+arguments+" seconds")
-            elif arguments != "" and not only_numbers(arguments):
+                bot.state["timeout"] = int(arguments[0])
+                msg_send(bot.irc, bot.channel, "Rebooting in "+arguments[0]+" seconds")
+            elif arguments[0] != "" and not only_numbers(arguments[0]):
                 msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
                 return
             bot.state["reboot"] = True
