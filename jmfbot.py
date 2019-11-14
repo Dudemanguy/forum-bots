@@ -133,6 +133,11 @@ def main():
 
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                bot.state["kill"] = False
+                bot.state["fully_started"] = False
+                bot.state["first_join"] = True
+                bot.state["identified"] = False
+                bot.state["in_channel"] = False
                 with open("bot_state.txt", "w") as json_file:
                     json.dump(bot.state, json_file)
                 msg_send(bot.irc, bot.channel, "bbl")
@@ -143,13 +148,18 @@ def main():
 
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+                bot.state["reboot"] = False
+                bot.state["fully_started"] = False
+                bot.state["first_join"] = True
+                bot.state["identified"] = False
+                bot.state["in_channel"] = False
                 with open("bot_state.txt", "w") as json_file:
                     json.dump(bot.state, json_file)
                 msg_send(bot.irc, bot.channel, "brb")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
-                os.execl("jmfbot.py")
+                os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
         if bot.state["fully_started"] and time.time() >= finish_time:
             soup = get_html(bot, bot.searchurl)
