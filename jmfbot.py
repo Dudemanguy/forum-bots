@@ -164,7 +164,11 @@ def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[1][2:]
         if substring == "bbl" and bot.state["greeter"]:
-            msg_send(bot.irc, bot.channel, "bbl "+user)
+            chance = random.randint(1, 100)
+            if chance > 65:
+                msg_sent(bot.irc, bot.channel, "fuck off "+user)
+            else:
+                msg_send(bot.irc, bot.channel, "bbl "+user)
 
 def check_for_command(bot, user, text):
     if bot.state["op-only"] and not is_op(bot, user):
