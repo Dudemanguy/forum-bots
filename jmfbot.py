@@ -149,7 +149,7 @@ def main():
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
                 bot.irc.close()
-                os.execl("jmfbot.py"))
+                os.execl("jmfbot.py")
 
         if bot.state["fully_started"] and time.time() >= finish_time:
             soup = get_html(bot, bot.searchurl)
