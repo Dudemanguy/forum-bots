@@ -220,7 +220,7 @@ def execute_command(bot, str_split, user):
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, set, show")
+        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, reboot, set, show")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
@@ -311,6 +311,11 @@ def execute_command(bot, str_split, user):
                 msg_send(bot.irc, bot.channel, "User greeter turned on")
             else:
                 msg_send(bot.irc, bot.channel, "User greeter turned off")
+        elif arguments == "op-only":
+            if bot.state["op-only"]:
+                msg_send(bot.irc, bot.channel, "op-only is turned on")
+            else:
+                msg_send(bot.irc, bot.channel, "op-only is turned off")
         elif arguments == "ragequits":
             msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
 
