@@ -62,6 +62,7 @@ def main():
     bot.botnick = args.botnick
     bot.botpass = args.botpass
     bot.channel = args.channel
+    bot.names.append(bot.botnick)
     bot.server = args.server
 
     bot.br,bot.botpass = mechanize_login(bot)
@@ -91,7 +92,6 @@ def main():
     finish_time = time.time() + 60
     timeout = 60*1000
 
-    bot.names.append(bot.botnick)
     bot.irc.setblocking(0)
 
     while True:
