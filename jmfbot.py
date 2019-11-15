@@ -110,7 +110,7 @@ def main():
         if text != "":
             print(text)
 
-        check_text(bot, text)
+        check_text(bot, init, text)
 
         if not init["fully_started"]:
             if not init["identified"] and bot.state["identify"]:
@@ -227,19 +227,29 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-        bot.names.remove(user)
-    if text.find("PART") != 1 and text.find(bot.channel) == -1:
+        if is_op(bot, user):
+            bot.names.remove("@"+user)
+        elif is_voice(bot, user):
+            bot.names.remove("+"+user)
+        else:
+            bot.names.remove(user)
+    elif text.find("PART") != 1 and text.find(bot.channel) == -1:
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-        bot.names.remove(user)
+        if is_op(bot, user):
+            bot.names.remove("@"+user)
+        elif is_voice(bot, user):
+            bot.names.remove("+"+user)
+        else:
+            bot.names.remove(user)
 
-def check_text(bot, text):
+def check_text(bot, init, text):
     if text == "":
         return
     elif text[:4] == "PING":
         reply_pong(bot.irc, text)
-    else:
+    elif init["fully_started"]:
         user = get_user(text)
         if user != None:
             check_for_user_mode(bot, user, text)
@@ -407,6 +417,12 @@ def identify_name(bot, text):
 def is_op(bot, user):
     for i in bot.names:
         if i[0] == "@" and user == i[1:]:
+            return True
+    return False
+
+def is_voice(bot, user):
+    for i in bot.names:
+        if i[0] == "+" and user == i[1:]:
             return True
     return False
 
