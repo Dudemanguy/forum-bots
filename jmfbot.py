@@ -247,10 +247,11 @@ def check_text(bot, text):
         user = get_user(text)
         if user != None:
             check_for_user_mode(bot, user, text)
-            check_for_command(bot, user, text)
-            check_for_bblquit(bot, user, text)
-            check_for_jambo(bot, user, text)
             check_for_user_entry(bot, user, text)
+            check_for_bblquit(bot, user, text)
+            check_for_user_exit(bot, user, text)
+            check_for_command(bot, user, text)
+            check_for_jambo(bot, user, text)
 
 def execute_command(bot, str_split, user):
     command = str_split[0]
