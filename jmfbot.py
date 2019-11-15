@@ -33,12 +33,8 @@ class irc_bot():
     poller = ""
 
     state = {
-        "first_join" : True,
-        "fully_started" : False,
         "greeter" : True,
-        "identified" : False,
         "identify" : True,
-        "in_channel" : False,
         "kill" : False,
         "op-only": False,
         "ragequits" : 0,
@@ -85,6 +81,12 @@ def main():
         with open("bot_state.txt") as f:
             bot.state = json.load(f)
 
+    init = {
+        "first_join" : True,
+        "fully_started" : False,
+        "identified" : False,
+    }
+
     old_full = []
     bot.irc = socket.socket()
     if bot.state["ssl"]:
@@ -110,34 +112,30 @@ def main():
 
         check_text(bot, text)
 
-        if not bot.state["fully_started"]:
-            if not bot.state["identified"] and bot.state["identify"]:
+        if not init["fully_started"]:
+            if not init["identified"] and bot.state["identify"]:
                 identify_name(bot, text)
                 if text.find("Password incorrect.") != -1:
                     bot.botpass = getpass.getpass("Password: ")
 
-            if bot.state["identified"]:
+            if init["identified"]:
                 if text.find('+r') != -1:                      
                     channel_join(bot)
                 if text.find('+v') != -1:
                     get_names(bot)
                     msg_send(bot.irc, bot.channel, "hi")
-                    bot.state["fully_started"] = True
+                    init["fully_started"] = True
             else:
                 if text.find("Own a large/active channel") != -1:
                     channel_join(bot)
                 if text.find("End of /NAMES list.") != -1:
                     get_names(bot)
                     msg_send(bot.irc, bot.channel, "hi")
-                    bot.state["fully_started"] = True
+                    init["fully_started"] = True
 
         if bot.state["kill"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 bot.state["kill"] = False
-                bot.state["fully_started"] = False
-                bot.state["first_join"] = True
-                bot.state["identified"] = False
-                bot.state["in_channel"] = False
                 with open("bot_state.txt", "w") as json_file:
                     json.dump(bot.state, json_file)
                 msg_send(bot.irc, bot.channel, "bbl")
@@ -149,10 +147,6 @@ def main():
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 bot.state["reboot"] = False
-                bot.state["fully_started"] = False
-                bot.state["first_join"] = True
-                bot.state["identified"] = False
-                bot.state["in_channel"] = False
                 with open("bot_state.txt", "w") as json_file:
                     json.dump(bot.state, json_file)
                 msg_send(bot.irc, bot.channel, "brb")
@@ -161,14 +155,14 @@ def main():
                 bot.irc.close()
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
-        if bot.state["fully_started"] and time.time() >= finish_time:
+        if init["fully_started"] and time.time() >= finish_time:
             soup = get_html(bot, bot.searchurl)
             full = update_info(bot, soup)
             for i in range(0, len(full)):
                 if not exists_in_old(full[i], old_full) and not bot.state["first_join"]:
                     msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
-            if bot.state["first_join"]:
-                bot.state["first_join"] = False
+            if init["first_join"]:
+                init["first_join"] = False
             old_full = full
             finish_time = time.time() + 60
 
@@ -176,7 +170,6 @@ def main():
 
 def channel_join(bot):
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
-    bot.state["in_channel"] = True
 
 def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
@@ -201,18 +194,15 @@ def check_for_command(bot, user, text):
                 if len(str_split) > 1:
                     execute_command(bot, str_split[1:], user)
 
-def check_for_ragequit(bot, user, text):
-    if user.lower() == "jeckidy" and text.find("QUIT") != 1 and text.find(bot.channel) == -1:
-        bot.state["ragequits"] += 1
-        msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-
 def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[0]
         if substring.find("JOIN") != -1:
             bot.names.append(user)
-            if bot.state["greeter"] and user != bot.botnick:
+            if bot.state["greeter"] and user != bot.botnick and user != "djindy":
                 msg_send(bot.irc, bot.channel, "hi "+user)
+            if bot.state["greeter"] and user == "djindy":
+                msg_send(bot.irc, bot.channel, "mambo")
 
 def check_for_user_mode(bot, user, text):
     if user == "JNET" and text.find("MODE") != -1:
@@ -227,10 +217,16 @@ def check_for_user_mode(bot, user, text):
 
 def check_for_user_exit(bot, user, text):
     if text.find("QUIT") != 1 and text.find(bot.channel) == -1:
+        if user.lower() == "jeckidy":
+            bot.state["ragequits"] += 1
+            msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
         bot.names.remove(user)
         bot.names.remove("+"+user)
         bot.names.remove("@"+user)
     if text.find("PART") != 1 and text.find(bot.channel) == -1:
+        if user.lower() == "jeckidy":
+            bot.state["ragequits"] += 1
+            msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
         bot.names.remove(user)
         bot.names.remove("+"+user)
         bot.names.remove("@"+user)
@@ -244,7 +240,6 @@ def check_text(bot, text):
         user = get_user(text)
         if user != None:
             check_for_command(bot, user, text)
-            check_for_ragequit(bot, user, text)
             check_for_bblquit(bot, user, text)
             check_for_user_entry(bot, user, text)
             check_for_user_mode(bot, user, text)
