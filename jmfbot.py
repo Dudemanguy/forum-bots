@@ -228,15 +228,11 @@ def check_for_user_exit(bot, user, text):
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
         bot.names.remove(user)
-        bot.names.remove("+"+user)
-        bot.names.remove("@"+user)
     if text.find("PART") != 1 and text.find(bot.channel) == -1:
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
         bot.names.remove(user)
-        bot.names.remove("+"+user)
-        bot.names.remove("@"+user)
 
 def check_text(bot, text):
     if text == "":
