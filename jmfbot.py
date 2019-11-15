@@ -194,15 +194,19 @@ def check_for_command(bot, user, text):
                 if len(str_split) > 1:
                     execute_command(bot, str_split[1:], user)
 
+def check_for_jambo(bot, user, text):
+    if text.find(bot.channel) != -1 and user == "djindy":
+        substring = text.split(bot.channel)[1][2:]
+        if substring.lower() == "jambo":
+            msg_send(bot.irc, bot.channel, "mambo")
+
 def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[0]
         if substring.find("JOIN") != -1:
             bot.names.append(user)
-            if bot.state["greeter"] and user != bot.botnick and user != "djindy":
+            if bot.state["greeter"] and user != bot.botnick:
                 msg_send(bot.irc, bot.channel, "hi "+user)
-            if bot.state["greeter"] and user == "djindy":
-                msg_send(bot.irc, bot.channel, "mambo")
 
 def check_for_user_mode(bot, user, text):
     if user == "JNET" and text.find("MODE") != -1:
@@ -241,6 +245,7 @@ def check_text(bot, text):
         if user != None:
             check_for_command(bot, user, text)
             check_for_bblquit(bot, user, text)
+            check_for_jambo(bot, user, text)
             check_for_user_entry(bot, user, text)
             check_for_user_mode(bot, user, text)
 
