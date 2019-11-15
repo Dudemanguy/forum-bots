@@ -117,6 +117,8 @@ def main():
                 identify_name(bot, text)
                 if text.find("Password incorrect.") != -1:
                     bot.botpass = getpass.getpass("Password: ")
+                else:
+                    init["identified"] = True
 
             if init["identified"]:
                 if text.find('+r') != -1:                      
@@ -159,7 +161,7 @@ def main():
             soup = get_html(bot, bot.searchurl)
             full = update_info(bot, soup)
             for i in range(0, len(full)):
-                if not exists_in_old(full[i], old_full) and not bot.state["first_join"]:
+                if not exists_in_old(full[i], old_full) and not init["first_join"]:
                     msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
             if init["first_join"]:
                 init["first_join"] = False
@@ -404,7 +406,6 @@ def get_user(text):
 def identify_name(bot, text):
     if text.find('PING') != -1:
         bot.irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+bot.botpass+"\r\n", "UTF-8"))
-        bot.state["identified"] = True
 
 def is_op(bot, user):
     for i in bot.names:
