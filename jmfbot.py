@@ -114,24 +114,25 @@ def main():
 
         if not init["fully_started"]:
             if not init["identified"] and bot.state["identify"]:
-                identify_name(bot, text)
-                if text.find("Password incorrect.") != -1:
-                    bot.botpass = getpass.getpass("Password: ")
-                else:
-                    init["identified"] = True
+                if text.find("PING") != -1:
+                    identify_name(bot, text)
+                    if text.find("Password incorrect.") != -1:
+                        bot.botpass = getpass.getpass("Password: ")
+                    else:
+                        init["identified"] = True
 
             if init["identified"]:
+                get_names(bot, text)
                 if text.find('+r') != -1:                      
                     channel_join(bot)
                 if text.find('+v') != -1:
-                    get_names(bot)
                     msg_send(bot.irc, bot.channel, "hi")
                     init["fully_started"] = True
             else:
+                get_names(bot, text)
                 if text.find("Own a large/active channel") != -1:
                     channel_join(bot)
                 if text.find("End of /NAMES list.") != -1:
-                    get_names(bot)
                     msg_send(bot.irc, bot.channel, "hi")
                     init["fully_started"] = True
 
@@ -245,11 +246,11 @@ def check_text(bot, text):
     else:
         user = get_user(text)
         if user != None:
+            check_for_user_mode(bot, user, text)
             check_for_command(bot, user, text)
             check_for_bblquit(bot, user, text)
             check_for_jambo(bot, user, text)
             check_for_user_entry(bot, user, text)
-            check_for_user_mode(bot, user, text)
 
 def execute_command(bot, str_split, user):
     command = str_split[0]
@@ -382,11 +383,11 @@ def get_html(bot, url):
     except:
         return -1
 
-def get_names(bot):
-    bot.irc.send(bytes("NAMES " + bot.channel + "\n", "UTF-8"))
-    bot.poller.poll()
-    names = get_response(bot.irc)
-    bot.names = names.split()
+def get_names(bot, text):
+    if text.find(bot.channel) != -1:
+        str_split = text.split(bot.channel)
+        if str_split[0].find(bot.botnick+" *") != -1 and str_split[1].find(bot.botnick) != -1:
+            bot.names = str_split[1][2:].split()
 
 def get_response(irc):
     try:
@@ -404,8 +405,7 @@ def get_user(text):
         return text.split("!")[0][1:]
 
 def identify_name(bot, text):
-    if text.find('PING') != -1:
-        bot.irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+bot.botpass+"\r\n", "UTF-8"))
+    bot.irc.send(bytes("PRIVMSG NickServ@services.rizon.net :IDENTIFY "+bot.botpass+"\r\n", "UTF-8"))
 
 def is_op(bot, user):
     for i in bot.names:
