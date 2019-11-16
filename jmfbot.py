@@ -223,7 +223,7 @@ def check_for_user_mode(bot, user, text):
             bot.names.append("@"+name)
 
 def check_for_user_exit(bot, user, text):
-    if text.find("QUIT") != 1 and text.find(bot.channel) == -1:
+    if text.find("QUIT") != -1 and text.find(bot.channel) == -1:
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
@@ -233,7 +233,7 @@ def check_for_user_exit(bot, user, text):
             bot.names.remove("+"+user)
         else:
             bot.names.remove(user)
-    elif text.find("PART") != 1 and text.find(bot.channel) == -1:
+    elif text.find("PART") != -1 and text.find(bot.channel) == -1:
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
