@@ -479,13 +479,13 @@ def update_info(bot, soup):
     thread_names = soup.find_all("a", {"id" : re.compile("tid_.*")})
     for i in range(len(poster_names)-1, -1, -1):
         if poster_names[i].strong != None and poster_names[i].span != None:
-            if str(poster_names[i].a).find("search") > -1:
+            if str(poster_names[i].a).find("search.php") > -1:
                 continue
             poster.append(poster_names[i].strong.contents[0])
     for i in range(len(thread_names)-1, -1, -1):
         thread.append(thread_names[i].contents[0])
     for i in range(len(poster_names)-1, -1, -1):
-        if poster_names[i].span != None and str(poster_names[i].a).find("search") == -1:
+        if poster_names[i].span != None and str(poster_names[i].a).find("search.php") == -1:
             time.append(poster_names[i].contents[2][2:])
     for i in range(len(thread_names)-1, -1, -1):
         thread_id = thread_names[i].get('id')[4:]
