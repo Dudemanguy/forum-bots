@@ -160,6 +160,8 @@ def main():
 
         if init["fully_started"] and time.time() >= finish_time:
             soup = get_html(bot, bot.searchurl)
+            if soup == -1:
+                continue
             full = update_info(bot, soup)
             for i in range(0, len(full)):
                 if not exists_in_old(full[i], old_full) and not init["first_join"]:
