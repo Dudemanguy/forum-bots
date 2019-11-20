@@ -229,6 +229,8 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
+            with open("bot_state.txt", "w") as json_file:
+                json.dump(bot.state, json_file)
         if is_op(bot, user):
             bot.names.remove("@"+user)
         elif is_voice(bot, user):
@@ -239,6 +241,8 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
+            with open("bot_state.txt", "w") as json_file:
+                json.dump(bot.state, json_file)
         if is_op(bot, user):
             bot.names.remove("@"+user)
         elif is_voice(bot, user):
