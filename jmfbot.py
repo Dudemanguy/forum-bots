@@ -205,6 +205,14 @@ def check_for_jambo(bot, user, text):
         if substring.lower() == "jambo":
             msg_send(bot.irc, bot.channel, "mambo")
 
+def check_for_nick_change(bot, user, text):
+    if text.find("NICK") != -1 and text.find(bot.channel) == -1:
+        new_nick = text.split("NICK :")[1]
+        for name in bot.names:
+            if name == user or name == user[1:]:
+                bot.names.remove(name)
+                bot.names.append(new_nick)
+
 def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[0]
@@ -260,6 +268,7 @@ def check_text(bot, init, text):
         if user != None:
             check_for_user_mode(bot, user, text)
             check_for_user_entry(bot, user, text)
+            check_for_nick_change(bot, user, text)
             check_for_bblquit(bot, user, text)
             check_for_user_exit(bot, user, text)
             check_for_command(bot, user, text)
