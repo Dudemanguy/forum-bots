@@ -399,7 +399,7 @@ def exists_in_old(item, old_full):
 
 def get_html(bot, url):
     try:
-        html = bot.br.open(url).read()
+        html = bot.br.open(url, timeout=30.0).read()
         soup = BeautifulSoup(html, "html.parser")
         return soup
     except:
