@@ -466,7 +466,10 @@ def mechanize_login(bot):
     return bot.br,bot.botpass
 
 def msg_send(irc, channel, msg):
-    irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
+    try:
+        irc.send(bytes("PRIVMSG " + channel + " :" + msg + "\n", "UTF-8"))
+    except:
+        pass
 
 def only_numbers(string):
     for i in string:
