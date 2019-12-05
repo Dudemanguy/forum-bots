@@ -118,8 +118,8 @@ def main():
                     identify_name(bot, text)
                     if text.find("Password incorrect.") != -1:
                         bot.botpass = getpass.getpass("Password: ")
-                    else:
-                        init["identified"] = True
+            else:
+                init["identified"] = True
 
             if init["identified"]:
                 get_names(bot, text)
@@ -279,13 +279,17 @@ def execute_command(bot, str_split, user):
     arguments = ""
     if len(str_split) > 1:
         arguments = str_split[1]
-    if command == "echo" and arguments != "":
+    if command == "action" and arguments != "":
+        msg_action(bot.irc, bot.channel, arguments)
+    elif command == "echo" and arguments != "":
         msg_send(bot.irc, bot.channel, arguments)
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, random, reboot, set, show, update")
+        msg_send(bot.irc, bot.channel, "Available commands: action, echo, help, kill, list, random, reboot, set, show, update")
     elif command == "help" and arguments != "":
+        if arguments == "action":
+            msg_send(bot.irc, bot.channel, "action [message] -- tell the bot to send a message with /me")
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
         if arguments == "help":
@@ -464,6 +468,12 @@ def mechanize_login(bot):
         bot.br.form["username"] = bot.botnick
         bot.br.form["password"] = bot.botpass
     return bot.br,bot.botpass
+
+def msg_action(irc, channel, msg):
+    try:
+        irc.send(bytes("PRIVMSG " + channel + " :\001ACTION " + msg + "\n", "UTF-8"))
+    except:
+        pass
 
 def msg_send(irc, channel, msg):
     try:
