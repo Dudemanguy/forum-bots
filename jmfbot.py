@@ -240,11 +240,14 @@ def check_for_user_exit(bot, user, text):
             with open("bot_state.txt", "w") as json_file:
                 json.dump(bot.state, json_file)
         if is_op(bot, user):
-            bot.names.remove("@"+user)
+            if "@"+user in bot.names:
+                bot.names.remove("@"+user)
         elif is_voice(bot, user):
-            bot.names.remove("+"+user)
+            if "+"+user in bot.names:
+                bot.names.remove("+"+user)
         else:
-            bot.names.remove(user)
+            if user in bot.names:
+                bot.names.remove(user)
     elif text.find("PART") != -1 and text.find(bot.channel) == -1:
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
@@ -252,11 +255,14 @@ def check_for_user_exit(bot, user, text):
             with open("bot_state.txt", "w") as json_file:
                 json.dump(bot.state, json_file)
         if is_op(bot, user):
-            bot.names.remove("@"+user)
+            if "@"+user in bot.names:
+                bot.names.remove("@"+user)
         elif is_voice(bot, user):
-            bot.names.remove("+"+user)
+            if "+"+user in bot.names:
+                bot.names.remove("+"+user)
         else:
-            bot.names.remove(user)
+            if user in bot.names:
+                bot.names.remove(user)
 
 def check_text(bot, init, text):
     if text == "":
