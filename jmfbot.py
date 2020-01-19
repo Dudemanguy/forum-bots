@@ -15,10 +15,10 @@ import time
 from bs4 import BeautifulSoup
 
 class irc_bot():
-    baseurl = "https://jpmetal.org/showthread.php?tid="
-    loginurl = "https://jpmetal.org/member.php?action=login"
-    searchurl = "https://jpmetal.org/search.php?action=getdaily"
-    statsurl = "https://jpmetal.org/stats.php"
+    baseurl = "https://japanesemetalforum.com/showthread.php?tid="
+    loginurl = "https://japanesemetalforum.com/member.php?action=login"
+    searchurl = "https://japanesemetalforum.com/search.php?action=getdaily"
+    statsurl = "https://japanesemetalforum.com/stats.php"
 
     botnick = ""
     botpass = ""
