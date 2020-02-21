@@ -122,16 +122,18 @@ def main():
                 init["identified"] = True
 
             if init["identified"]:
-                get_names(bot, text)
                 if text.find('+r') != -1:                      
                     channel_join(bot)
+                if text.find(bot.botnick+" @ "+bot.channel) != -1: 
+                    get_names(bot, text)
                 if text.find('+v') != -1:
                     msg_send(bot.irc, bot.channel, "hi")
                     init["fully_started"] = True
             else:
-                get_names(bot, text)
                 if text.find("Own a large/active channel") != -1:
                     channel_join(bot)
+                if text.find(bot.botnick+" @ "+bot.channel) != -1: 
+                    get_names(bot, text)
                 if text.find("End of /NAMES list.") != -1:
                     msg_send(bot.irc, bot.channel, "hi")
                     init["fully_started"] = True
@@ -419,10 +421,9 @@ def get_html(bot, url):
         return -1
 
 def get_names(bot, text):
-    if text.find(bot.channel) != -1:
-        str_split = text.split(bot.channel)
-        if str_split[0].find(bot.botnick+" *") != -1 and str_split[1].find(bot.botnick) != -1:
-            bot.names = str_split[1][2:].split()
+    str_split = text.split(":"+bot.botnick+" ")
+    for i in str_split[1].split():
+        bot.names.append(i)
 
 def get_response(irc):
     try:
