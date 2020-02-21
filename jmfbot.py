@@ -349,13 +349,16 @@ def execute_command(bot, str_split, user):
         if arguments == "thread":
             # add this mysterious constant that exists for unknown reasons but whatever
             thread_count = get_thread_count(bot) + 803
-            rand_soup = -1
-            while rand_soup == -1:
-                rand_tid = random.randint(1, thread_count)
-                rand_url = bot.baseurl+str(rand_tid)
-                rand_soup = get_html(bot, rand_url)
-            thread_title = rand_soup.find("title").contents[0]
-            msg_send(bot.irc, bot.channel, "Random thread: "+thread_title+" -- "+rand_url)
+            if thread_count == 0:
+                msg_send(bot.irc, bot.channel, "Couldn't connect to stats page.")
+            else:
+                rand_soup = -1
+                while rand_soup == -1:
+                    rand_tid = random.randint(1, thread_count)
+                    rand_url = bot.baseurl+str(rand_tid)
+                    rand_soup = get_html(bot, rand_url)
+                thread_title = rand_soup.find("title").contents[0]
+                msg_send(bot.irc, bot.channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
         if not is_op(bot, user):
             msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
@@ -430,6 +433,8 @@ def get_response(irc):
 
 def get_thread_count(bot):
     soup = get_html(bot, bot.statsurl)
+    if isinstance(soup, int):
+        return -1
     return int(soup.find_all("td")[3].find_all("strong")[1].contents[0].replace(",",""))
 
 def get_user(text):
