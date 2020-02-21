@@ -349,7 +349,7 @@ def execute_command(bot, str_split, user):
         if arguments == "thread":
             # add this mysterious constant that exists for unknown reasons but whatever
             thread_count = get_thread_count(bot) + 803
-            if thread_count == 0:
+            if thread_count == -1:
                 msg_send(bot.irc, bot.channel, "Couldn't connect to stats page.")
             else:
                 rand_soup = -1
