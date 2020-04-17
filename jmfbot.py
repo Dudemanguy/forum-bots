@@ -161,6 +161,12 @@ def main():
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
         if init["fully_started"] and time.time() >= finish_time:
+            connected = check_connection()
+            if not connected:
+                init["first_join"] = True
+                init["fully_started"] = False
+                init["identified"] = False
+                continue
             soup = get_html(bot, bot.searchurl)
             if soup == -1:
                 continue
@@ -177,6 +183,13 @@ def main():
 
 def channel_join(bot):
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
+
+def check_connection():
+    response = os.system("ping -c 1 japanesemetalforum.com > /dev/null")
+    if response == 0:
+        return True
+    else:
+        return False
 
 def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
