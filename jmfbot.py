@@ -8,6 +8,7 @@ import mechanize
 import os
 import random
 import re
+import requests
 import select
 import socket
 import ssl
@@ -167,7 +168,7 @@ def main():
                 init["fully_started"] = False
                 init["identified"] = False
                 continue
-            soup = get_html(bot, bot.searchurl)
+            soup = get_html_mechanize(bot, bot.searchurl)
             if soup == -1:
                 continue
             full = update_info(bot, soup)
@@ -224,6 +225,25 @@ def check_for_jambo(bot, user, text):
         substring = text.split(bot.channel)[1][2:]
         if substring.lower() == "jambo":
             msg_send(bot.irc, bot.channel, "mambo")
+
+def check_for_url(bot, user, text):
+    if len(text.split(bot.channel+" :")) != 2:
+        return
+    string = text.split(bot.channel+" :")[1]
+    if string.find("http") != -1 or re.search("www", string):
+        split = string.split()
+        for substring in split:
+            if substring.find("http") != -1 or re.search("www", substring):
+                if substring.find("http") == -1:
+                    substring = "https://"+substring
+                if substring.find("twitter.com") != -1 and substring.find("://mobile.") == -1:
+                    substring = substring.replace("http://", "https://mobile.")
+                    substring = substring.replace("https://", "https://mobile.")
+                soup = get_html_requests(bot, substring)
+                if soup == -1:
+                    continue
+                if soup.find("title"):
+                    msg_send(bot.irc, bot.channel, "[Title] "+soup.find("title").contents[0].strip())
 
 def check_for_nick_change(bot, user, text):
     if text.find("NICK") != -1 and text.find(bot.channel) == -1:
@@ -298,6 +318,7 @@ def check_text(bot, init, text):
             check_for_bblquit(bot, user, text)
             check_for_user_exit(bot, user, text)
             check_for_command(bot, user, text)
+            check_for_url(bot, user, text)
             check_for_jambo(bot, user, text)
 
 def execute_command(bot, str_split, user):
@@ -376,7 +397,7 @@ def execute_command(bot, str_split, user):
                 while rand_soup == -1:
                     rand_tid = random.randint(1, thread_count)
                     rand_url = bot.baseurl+str(rand_tid)
-                    rand_soup = get_html(bot, rand_url)
+                    rand_soup = get_html_mechanize(bot, rand_url)
                 thread_title = rand_soup.find("title").contents[0]
                 msg_send(bot.irc, bot.channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
@@ -430,9 +451,17 @@ def exists_in_old(item, old_full):
             return True
     return False
 
-def get_html(bot, url):
+def get_html_mechanize(bot, url):
     try:
         html = bot.br.open(url, timeout=30.0).read()
+        soup = BeautifulSoup(html, "html.parser")
+        return soup
+    except:
+        return -1
+
+def get_html_requests(bot, url):
+    try:
+        html = requests.get(url).text
         soup = BeautifulSoup(html, "html.parser")
         return soup
     except:
@@ -451,7 +480,7 @@ def get_response(irc):
         return ""
 
 def get_thread_count(bot):
-    soup = get_html(bot, bot.statsurl)
+    soup = get_html_mechanize(bot, bot.statsurl)
     if isinstance(soup, int):
         return -1
     return int(soup.find_all("td")[3].find_all("strong")[1].contents[0].replace(",",""))
