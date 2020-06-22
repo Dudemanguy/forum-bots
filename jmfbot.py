@@ -204,8 +204,13 @@ def check_for_bblquit(bot, user, text):
 def check_for_command(bot, user, text):
     if bot.state["op-only"] and not is_op(bot, user):
         return
+    raw = ""
+    if text.find("PRIVMSG "+bot.botnick) != -1:
+        raw = text.split(bot.botnick)[1][2:]
+        raw = "."+bot.botnick+" "+raw
     if text.find("."+bot.botnick) != -1:
         raw = text.split(bot.channel)[1][2:]
+    if raw != "":
         if raw == "."+bot.botnick:
             execute_command(bot, ["help"], user)
         else:
@@ -303,8 +308,8 @@ def execute_command(bot, str_split, user):
     if command == "echo" and arguments != "":
         msg_send(bot.irc, bot.channel, arguments)
     elif command == "help" and arguments == "":
-        msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
-        msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
+        msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
+        msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
         msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, random, reboot, set, show, update")
     elif command == "help" and arguments != "":
         if arguments == "echo":
