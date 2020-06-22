@@ -209,7 +209,7 @@ def check_for_command(bot, user, text):
     if text.find("PRIVMSG "+bot.botnick) != -1:
         raw = text.split(bot.botnick)[1][2:]
         raw = "."+bot.botnick+" "+raw
-    if text.find("."+bot.botnick) != -1:
+    elif text.find("."+bot.botnick) != -1:
         raw = text.split(bot.channel)[1][2:]
     if raw != "":
         if raw == "."+bot.botnick:
