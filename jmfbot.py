@@ -300,17 +300,13 @@ def execute_command(bot, str_split, user):
     arguments = ""
     if len(str_split) > 1:
         arguments = str_split[1]
-    if command == "action" and arguments != "":
-        msg_action(bot.irc, bot.channel, arguments)
-    elif command == "echo" and arguments != "":
+    if command == "echo" and arguments != "":
         msg_send(bot.irc, bot.channel, arguments)
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: ."+bot.botnick+" [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Type '."+bot.botnick+" help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: action, echo, help, kill, list, random, reboot, set, show, update")
+        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, random, reboot, set, show, update")
     elif command == "help" and arguments != "":
-        if arguments == "action":
-            msg_send(bot.irc, bot.channel, "action [message] -- tell the bot to send a message with /me")
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
         if arguments == "help":
@@ -319,8 +315,10 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
         if arguments == "list":
             msg_send(bot.irc, bot.channel, "list [actions|properties] -- list all actions/properties with a short description")
+        if arguments == "me":
+            msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
         if arguments == "random":
-            msg_send(bot.irc, bot.channel, "random [action] -- randomize a certain action")
+            msg_send(bot.irc, bot.channel, "random [actions] -- randomize a certain action")
         if arguments == "reboot":
             msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
         if arguments == "set":
@@ -348,6 +346,8 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
             msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
             msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
+    elif command == "me" and arguments != "":
+        msg_me(bot.irc, bot.channel, arguments)
     elif command == "reboot":
         if is_op(bot, user):
             if arguments != "" and only_numbers(arguments):
@@ -494,7 +494,7 @@ def mechanize_login(bot):
         bot.br.form["password"] = bot.botpass
     return bot.br,bot.botpass
 
-def msg_action(irc, channel, msg):
+def msg_me(irc, channel, msg):
     try:
         irc.send(bytes("PRIVMSG " + channel + " :\001ACTION " + msg + "\n", "UTF-8"))
     except:
