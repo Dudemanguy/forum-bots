@@ -236,9 +236,6 @@ def check_for_url(bot, user, text):
             if substring.find("http") != -1 or re.search("www", substring):
                 if substring.find("http") == -1:
                     substring = "https://"+substring
-                if substring.find("twitter.com") != -1 and substring.find("://mobile.") == -1:
-                    substring = substring.replace("http://", "https://mobile.")
-                    substring = substring.replace("https://", "https://mobile.")
                 soup = get_html_requests(bot, substring)
                 if soup == -1:
                     continue
@@ -461,7 +458,13 @@ def get_html_mechanize(bot, url):
 
 def get_html_requests(bot, url):
     try:
-        html = requests.get(url).text
+        headers = {
+                "User-Agent": "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
+        }
+        if url.find("youtube.com") != -1:
+            html = requests.get(url).text
+        else:
+            html = requests.get(url, headers=headers).text
         soup = BeautifulSoup(html, "html.parser")
         return soup
     except:
