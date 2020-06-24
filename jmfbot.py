@@ -117,10 +117,7 @@ def main():
             if not init["identified"] and bot.state["identify"]:
                 if text.find("PING") != -1:
                     identify_name(bot, text)
-                    if text.find("Password incorrect.") != -1:
-                        bot.botpass = getpass.getpass("Password: ")
-            else:
-                init["identified"] = True
+                    init["identified"] = True
 
             if init["identified"]:
                 if text.find('+r') != -1:                      
@@ -306,6 +303,9 @@ def check_text(bot, init, text):
         return
     elif text[:4] == "PING":
         reply_pong(bot.irc, text)
+    elif text.find("Password incorrect.") != -1:
+        bot.botpass = getpass.getpass("Password: ")
+        init["identified"] = False
     elif init["fully_started"]:
         user = get_user(text)
         if user != None:
