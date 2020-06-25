@@ -114,8 +114,8 @@ def main():
         check_text(bot, init, text)
 
         if not init["fully_started"]:
-            if not init["identified"] and bot.state["identify"]:
-                if text.find("PING") != -1:
+            if bot.state["identify"]:
+                if text.find("please choose a different nick") != -1:
                     identify_name(bot, text)
                     init["identified"] = True
 
@@ -159,12 +159,6 @@ def main():
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
         if init["fully_started"] and time.time() >= finish_time:
-            connected = check_connection()
-            if not connected:
-                init["first_join"] = True
-                init["fully_started"] = False
-                init["identified"] = False
-                continue
             soup = get_html_mechanize(bot, bot.searchurl)
             if soup == -1:
                 continue
@@ -183,7 +177,7 @@ def channel_join(bot):
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
 
 def check_connection():
-    response = os.system("ping -c 1 japanesemetalforum.com > /dev/null")
+    response = os.system("ping -c 1 rizon.net > /dev/null")
     if response == 0:
         return True
     else:
@@ -233,6 +227,10 @@ def check_for_url(bot, user, text):
             if substring.find("http") != -1 or re.search("www", substring):
                 if substring.find("http") == -1:
                     substring = "https://"+substring
+                if substring.find("mobile.twitter.com") != -1:
+                    substring = substring.replace("mobile.twitter.com", "nitter.net")
+                elif substring.find("twitter.com") != -1:
+                    substring = substring.replace("twitter.com", "nitter.net")
                 soup = get_html_requests(bot, substring)
                 if soup == -1:
                     continue
