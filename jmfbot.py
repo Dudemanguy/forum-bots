@@ -336,7 +336,7 @@ def execute_command(bot, str_split, user):
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, random, reboot, set, show, update")
+        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, reboot, set, show, thread, update")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
@@ -345,17 +345,17 @@ def execute_command(bot, str_split, user):
         if arguments == "kill":
             msg_send(bot.irc, bot.channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
         if arguments == "list":
-            msg_send(bot.irc, bot.channel, "list [actions|properties] -- list all actions/properties with a short description")
+            msg_send(bot.irc, bot.channel, "list [properties (optional)] -- list all properties with a short description")
         if arguments == "me":
             msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
-        if arguments == "random":
-            msg_send(bot.irc, bot.channel, "random [actions] -- randomize a certain action")
         if arguments == "reboot":
             msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
         if arguments == "set":
             msg_send(bot.irc, bot.channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
         if arguments == "show":
             msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
+        if arguments == "thread":
+            msg_send(bot.irc, bot.channel, "thread [random/integer (optional)] -- get a random thread (default) or optionally specifiy one with an integer")
         if arguments == "update":
             msg_send(bot.irc, bot.channel, "update -- pull the latest changes from git (channel op only)")
     elif command == "kill":
@@ -370,13 +370,10 @@ def execute_command(bot, str_split, user):
             bot.state["kill"] = True
         else:
             msg_send(bot.irc, bot.channel, "Only channel ops can kill me.")
-    elif command == "list" and arguments != "":
-        if arguments == "actions":
-            msg_send(bot.irc, bot.channel, "thread -- retrieve a thread from the forum")
-        elif arguments == "properties":
-            msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
-            msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
-            msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
+    elif command == "list" and arguments != "" or command == "list" and arguments == "":
+        msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
+        msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
+        msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "me" and arguments != "":
         msg_me(bot.irc, bot.channel, arguments)
     elif command == "reboot":
@@ -391,20 +388,6 @@ def execute_command(bot, str_split, user):
             bot.state["reboot"] = True
         else:
             msg_send(bot.irc, bot.channel, "Only channel ops can reboot me.")
-    elif command == "random" and arguments != "":
-        if arguments == "thread":
-            # add this mysterious constant that exists for unknown reasons but whatever
-            thread_count = get_thread_count(bot) + 803
-            if thread_count == -1:
-                msg_send(bot.irc, bot.channel, "Couldn't connect to stats page.")
-            else:
-                rand_soup = -1
-                while rand_soup == -1:
-                    rand_tid = random.randint(1, thread_count)
-                    rand_url = bot.baseurl+str(rand_tid)
-                    rand_soup = get_html_mechanize(bot, rand_url)
-                thread_title = rand_soup.find("title").contents[0]
-                msg_send(bot.irc, bot.channel, "Random thread: "+thread_title+" -- "+rand_url)
     elif command == "set" and arguments != "":
         if not is_op(bot, user):
             msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
@@ -443,6 +426,21 @@ def execute_command(bot, str_split, user):
                 msg_send(bot.irc, bot.channel, "op-only is turned off")
         elif arguments == "ragequits":
             msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
+    elif command == "thread":
+        thread_url = ""
+        thread_title = ""
+        if arguments.isdigit():
+            thread_url = bot.baseurl+arguments
+            thread_title = get_thread_title(bot, thread_url)
+        elif arguments == "" or arguments == "random":
+            # add this mysterious constant that exists for unknown reasons but whatever
+            thread_count = 4643
+            if thread_count > 0:
+                tid = random.randint(1, thread_count)
+                thread_url = bot.baseurl+str(tid)
+                thread_title = get_thread_title(bot, thread_url)
+        if thread_title != "" and thread_url != "":
+            msg_send(bot.irc, bot.channel, thread_title+" -- "+thread_url)
     elif command == "update" and arguments == "":
         if not is_op(bot, user):
             msg_send(bot.irc, bot.channel, "Only channel ops can use the update command.")
@@ -490,9 +488,17 @@ def get_response(irc):
     except:
         return ""
 
+def get_thread_title(bot, url):
+    soup = get_html_mechanize(bot, url)
+    if soup == -1:
+        msg_send(bot.irc, bot.channel, "Couldn't connect to thread page.")
+        return ""
+    return soup.find("title").contents[0]
+
 def get_thread_count(bot):
     soup = get_html_mechanize(bot, bot.statsurl)
     if isinstance(soup, int):
+        msg_send(bot.irc, bot.channel, "Couldn't connect to stats page.")
         return -1
     return int(soup.find_all("td")[3].find_all("strong")[1].contents[0].replace(",",""))
 
