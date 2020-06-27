@@ -336,7 +336,7 @@ def execute_command(bot, str_split, user):
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, reboot, set, show, thread, update")
+        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, pull, reboot, set, show, thread")
     elif command == "help" and arguments != "":
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
@@ -348,6 +348,8 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "list [properties (optional)] -- list all properties with a short description")
         if arguments == "me":
             msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
+        if arguments == "pull":
+            msg_send(bot.irc, bot.channel, "pull -- pull the latest changes from git (channel op only)")
         if arguments == "reboot":
             msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
         if arguments == "set":
@@ -356,8 +358,6 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
         if arguments == "thread":
             msg_send(bot.irc, bot.channel, "thread [random/integer (optional)] -- get a random thread (default) or optionally specifiy one with an integer")
-        if arguments == "update":
-            msg_send(bot.irc, bot.channel, "update -- pull the latest changes from git (channel op only)")
     elif command == "kill":
         if is_op(bot, user):
             if arguments != "" and only_numbers(arguments):
@@ -376,6 +376,12 @@ def execute_command(bot, str_split, user):
         msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "me" and arguments != "":
         msg_me(bot.irc, bot.channel, arguments)
+    elif command == "pull" and arguments == "":
+        if not is_op(bot, user):
+            msg_send(bot.irc, bot.channel, "Only channel ops can use the pull command.")
+            return
+        msg_send(bot.irc, bot.channel, "Pulling the latest changes from git")
+        os.system("git pull")
     elif command == "reboot":
         if is_op(bot, user):
             if arguments != "" and only_numbers(arguments):
@@ -441,12 +447,6 @@ def execute_command(bot, str_split, user):
                 thread_title = get_thread_title(bot, thread_url)
         if thread_title != "" and thread_url != "":
             msg_send(bot.irc, bot.channel, thread_title+" -- "+thread_url)
-    elif command == "update" and arguments == "":
-        if not is_op(bot, user):
-            msg_send(bot.irc, bot.channel, "Only channel ops can use the update command.")
-            return
-        msg_send(bot.irc, bot.channel, "Pulling the latest changes from git")
-        os.system("git pull")
 
 def exists_in_old(item, old_full):
     for i in range(0, len(old_full)):
