@@ -331,13 +331,24 @@ def execute_command(bot, str_split, user):
     arguments = ""
     if len(str_split) > 1:
         arguments = str_split[1]
-    if command == "echo" and arguments != "":
+    if command == "dice":
+        if arguments == "":
+            size = 10
+        elif arguments.isdigit():
+            size = int(arguments)
+        else:
+            return
+        roll = random.randint(1, size)
+        msg_send(bot.irc, bot.channel, str(roll))
+    elif command == "echo" and arguments != "":
         msg_send(bot.irc, bot.channel, arguments)
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: echo, help, kill, list, me, pull, reboot, set, show, thread")
+        msg_send(bot.irc, bot.channel, "Available commands: dice, echo, help, kill, list, me, pull, reboot, set, show, thread")
     elif command == "help" and arguments != "":
+        if arguments == "dice":
+            msg_send(bot.irc, bot.channel, "dice [size (optional)] -- roll a dice with a certain size (default 10)")
         if arguments == "echo":
             msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
         if arguments == "help":
