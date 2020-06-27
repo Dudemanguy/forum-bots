@@ -345,7 +345,7 @@ def execute_command(bot, str_split, user):
     elif command == "help" and arguments == "":
         msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: dice, echo, help, kill, list, me, pull, reboot, set, show, thread")
+        msg_send(bot.irc, bot.channel, "Available commands: dice, echo, help, kill, me, pull, reboot, set, show, thread")
     elif command == "help" and arguments != "":
         if arguments == "dice":
             msg_send(bot.irc, bot.channel, "dice [size (optional)] -- roll a dice with a certain size (default 10)")
@@ -355,8 +355,6 @@ def execute_command(bot, str_split, user):
             msg_send(bot.irc, bot.channel, "help [command (optional)] -- display detailed help output for a particular command")
         if arguments == "kill":
             msg_send(bot.irc, bot.channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
-        if arguments == "list":
-            msg_send(bot.irc, bot.channel, "list [properties (optional)] -- list all properties with a short description")
         if arguments == "me":
             msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
         if arguments == "pull":
@@ -381,10 +379,6 @@ def execute_command(bot, str_split, user):
             bot.state["kill"] = True
         else:
             msg_send(bot.irc, bot.channel, "Only channel ops can kill me.")
-    elif command == "list" and arguments != "" or command == "list" and arguments == "":
-        msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
-        msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
-        msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif command == "me" and arguments != "":
         msg_me(bot.irc, bot.channel, arguments)
     elif command == "pull" and arguments == "":
@@ -430,8 +424,12 @@ def execute_command(bot, str_split, user):
                 msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
             else:
                 msg_send(bot.irc, bot.channel, "Error: ragequits can only be set to an integer value")
-    elif command == "show" and arguments != "":
-        if arguments == "greeter":
+    elif command == "show":
+        if arguments == "":
+            msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
+            msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
+            msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
+        elif arguments == "greeter":
             if bot.state["greeter"]:
                 msg_send(bot.irc, bot.channel, "User greeter turned on")
             else:
