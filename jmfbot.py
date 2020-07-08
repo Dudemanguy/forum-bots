@@ -37,7 +37,6 @@ class irc_bot():
         "greeter" : True,
         "identify" : True,
         "kill" : False,
-        "missed_pings" : 0,
         "op-only": False,
         "ragequits" : 0,
         "reboot" : False,
@@ -160,26 +159,17 @@ def main():
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
         if init["fully_started"] and time.time() >= finish_time:
-            if not check_connection():
-                bot.state["missed_pings"] += 1
-            else:
-                bot.state["missed_pings"] = 0
-                soup = get_html_mechanize(bot, bot.searchurl)
-                if soup == -1:
-                    continue
-                full = update_info(bot, soup)
-                for i in range(0, len(full)):
-                    if not exists_in_old(full[i], old_full) and not init["first_join"]:
-                        msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
-                if init["first_join"]:
-                    init["first_join"] = False
-                old_full = full
+            soup = get_html_mechanize(bot, bot.searchurl)
+            if soup == -1:
+                continue
+            full = update_info(bot, soup)
+            for i in range(0, len(full)):
+                if not exists_in_old(full[i], old_full) and not init["first_join"]:
+                    msg_send(bot.irc, bot.channel, "["+bot.botnick+"] "+full[i][0]+" made a new post in thread: "+full[i][1]+" ("+full[i][2]+") -- "+full[i][3])
+            if init["first_join"]:
+                init["first_join"] = False
+            old_full = full
             finish_time = time.time() + 60
-
-        if bot.state["missed_pings"] == 10:
-            init["first_join"] = True
-            init["fully_started"] = False
-            init["identified"] = False
 
     return 0
 
