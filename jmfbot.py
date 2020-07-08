@@ -176,13 +176,6 @@ def main():
 def channel_join(bot):
     bot.irc.send(bytes("JOIN " + bot.channel + "\n", "UTF-8"))
 
-def check_connection():
-    response = os.system("ping -c 1 rizon.net > /dev/null")
-    if response == 0:
-        return True
-    else:
-        return False
-
 def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[1][2:]
