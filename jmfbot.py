@@ -224,6 +224,10 @@ def check_for_url(bot, user, text):
                     substring = substring.replace("mobile.twitter.com", "nitter.net")
                 elif substring.find("twitter.com") != -1:
                     substring = substring.replace("twitter.com", "nitter.net")
+                if substring.find("m.youtube.com") != -1:
+                    substring = substring.replace("m.youtube.com", "invidio.us")
+                elif substring.find("youtube.com") != -1:
+                    substring = substring.replace("youtube.com", "invidio.us")
                 soup = get_html_requests(bot, substring)
                 if soup == -1:
                     continue
@@ -459,10 +463,7 @@ def get_html_requests(bot, url):
         headers = {
                 "User-Agent": "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
         }
-        if url.find("youtube.com") != -1:
-            html = requests.get(url).text
-        else:
-            html = requests.get(url, headers=headers).text
+        html = requests.get(url, headers=headers).text
         soup = BeautifulSoup(html, "html.parser")
         return soup
     except:
