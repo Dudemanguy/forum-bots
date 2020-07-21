@@ -86,8 +86,8 @@ def main():
         bot.port = 6697
 
     if os.path.isfile("bot_state.txt"):
-        with open("bot_state.txt") as f:
-            bot.state = json.load(f)
+        ragequits = open("bot_state.txt", "r").read().strip()
+        bot.state["ragequits"] = ragequits
 
     init = {
         "first_join" : True,
@@ -146,8 +146,9 @@ def main():
         if bot.state["kill"]:
             if time.time() >= bot.state["wakeup_time"]:
                 bot.state["kill"] = False
-                with open("bot_state.txt", "w") as json_file:
-                    json.dump(bot.state, json_file)
+                ragequits = open("bot_state.txt", "w")
+                ragequits.write(bot.state["ragequits"])
+                ragequits.close()
                 msg_send(bot.irc, bot.channel, "bbl")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
@@ -176,8 +177,9 @@ def main():
         if bot.state["reboot"]:
             if time.time() >= bot.state["wakeup_time"]:
                 bot.state["reboot"] = False
-                with open("bot_state.txt", "w") as json_file:
-                    json.dump(bot.state, json_file)
+                ragequits = open("bot_state.txt", "w")
+                ragequits.write(bot.state["ragequits"])
+                ragequits.close()
                 msg_send(bot.irc, bot.channel, "brb")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
@@ -306,8 +308,9 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-            with open("bot_state.txt", "w") as json_file:
-                json.dump(bot.state, json_file)
+            ragequits = open("bot_state.txt", "w")
+            ragequits.write(bot.state["ragequits"])
+            ragequits.close()
         if is_op(bot, user):
             if "@"+user in bot.names:
                 bot.names.remove("@"+user)
@@ -321,8 +324,9 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-            with open("bot_state.txt", "w") as json_file:
-                json.dump(bot.state, json_file)
+            ragequits = open("bot_state.txt", "w")
+            ragequits.write(bot.state["ragequits"])
+            ragequits.close()
         if is_op(bot, user):
             if "@"+user in bot.names:
                 bot.names.remove("@"+user)
