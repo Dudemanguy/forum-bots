@@ -4,6 +4,7 @@ import argparse
 import getpass
 import http.cookiejar
 import json
+import math
 import mechanize
 import os
 import random
@@ -38,11 +39,19 @@ class irc_bot():
         "identify" : True,
         "kill" : False,
         "op-only": False,
+        "quiz": {},
+        "quiz_current": {"question": "", "answer": "", "hint": "", "hint_level": 0},
+        "quiz_iterator": 0,
+        "quiz_questions": [],
+        "quiz_score": {},
+        "quiz_state": False,
         "ragequits" : 0,
         "reboot" : False,
+        "sleep_interval" : 60,
         "ssl" : True,
         "timeout" : 0,
-        "timestamp" : 0
+        "timestamp" : 0,
+        "wakeup_time": 0
     }
 
 def main():
@@ -97,15 +106,15 @@ def main():
     bot.poller = select.poll()
     bot.poller.register(bot.irc, select.POLLIN)
 
-    finish_time = time.time() + 60
-    timeout = 60*1000
+    bot.state["wakeup_time"] = time.time() + bot.state["sleep_interval"]
+    timeout = bot.state["sleep_interval"]*1000
 
     bot.irc.setblocking(0)
 
     while True:
         current_time = time.time()
-        if current_time < finish_time:
-            timeout = (finish_time - current_time)*1000
+        if current_time < bot.state["wakeup_time"]:
+            timeout = (bot.state["wakeup_time"] - current_time)*1000
         bot.poller.poll(timeout)
         text = get_response(bot.irc)
         if text != "":
@@ -147,6 +156,25 @@ def main():
                 bot.irc.close()
                 break
 
+        if bot.state["quiz_state"]:
+            if time.time() >= bot.state["wakeup_time"]:
+                if bot.state["quiz_current"]["hint_level"] == 3:
+                    msg_send(bot.irc, bot.channel, "The correct answer was " + bot.state["quiz_current"]["answer"] + ".")
+                    if bot.state["quiz_iterator"] == 0:
+                        bot.state["quiz_state"] = False
+                        bot.state["sleep_interval"] = 60
+                        if bot.state["quiz_score"] == {}:
+                            msg_send(bot.irc, bot.channel, "Quiz finished. Wow, no one won. You guys suck.")
+                        else:
+                            winner = max(bot.state["quiz_score"], key=bot.state["quiz_score"].get)
+                            score = bot.state["quiz_score"][winner]
+                            msg_send(bot.irc, bot.channel, "Quiz finished. Winner is " + winner + " with a score of " + str(score) + ".")
+                    else:
+                        quiz_new_question(bot)
+                    continue
+                bot.state["quiz_current"]["hint_level"] += 1
+                quiz_display_hint(bot)
+
         if bot.state["reboot"]:
             if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
                 bot.state["reboot"] = False
@@ -158,7 +186,7 @@ def main():
                 bot.irc.close()
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
-        if init["fully_started"] and time.time() >= finish_time:
+        if init["fully_started"] and time.time() >= bot.state["wakeup_time"]:
             soup = get_html_mechanize(bot, bot.searchurl)
             if soup == -1:
                 continue
@@ -169,7 +197,7 @@ def main():
             if init["first_join"]:
                 init["first_join"] = False
             old_full = full
-            finish_time = time.time() + 60
+            bot.state["wakeup_time"] = time.time() + bot.state["sleep_interval"]
 
     return 0
 
@@ -235,6 +263,26 @@ def check_for_nick_change(bot, user, text):
             if name == user or name == user[1:]:
                 bot.names.remove(name)
                 bot.names.append(new_nick)
+
+def check_for_quiz_answer(bot, user, text):
+    if bot.state["quiz_current"]["answer"].lower() in text.lower():
+        msg_send(bot.irc, bot.channel, 
+            "Winner: " + user + "; Answer: "+bot.state["quiz_current"]["answer"])
+        if user in bot.state["quiz_score"]:
+            bot.state["quiz_score"][user] += 1
+        else:
+            bot.state["quiz_score"][user] = 1
+        if bot.state["quiz_iterator"] == 0:
+            bot.state["quiz_state"] = False
+            bot.state["sleep_interval"] = 60
+            if bot.state["quiz_score"] == {}:
+                msg_send(bot.irc, bot.channel, "Quiz finished. Wow, no one won. You guys suck.")
+            else:
+                winner = max(bot.state["quiz_score"], key=bot.state["quiz_score"].get)
+                score = bot.state["quiz_score"][winner]
+                msg_send(bot.irc, bot.channel, "Quiz finished. Winner is " + winner + " with a score of " + str(score) + ".")
+        else:
+            quiz_new_question(bot)
 
 def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
@@ -306,6 +354,8 @@ def check_text(bot, init, text):
             check_for_command(bot, user, text)
             check_for_url(bot, user, text)
             check_for_jambo(bot, user, text)
+        if bot.state["quiz_state"]:
+            check_for_quiz_answer(bot, user, text)
 
 def execute_command(bot, command, user):
     if command[0:4] == "dice":
@@ -326,6 +376,9 @@ def execute_command(bot, command, user):
     elif command[0:4] == "pull":
         args = command.split()[1:]
         execute_pull_command(bot, args, user)
+    elif command[0:4] == "quiz":
+        args = command.split()[1:]
+        execute_quiz_command(bot, args, user)
     elif command[0:6] == "reboot":
         args = command.split()[1:]
         execute_reboot_command(bot, args, user)
@@ -356,7 +409,7 @@ def execute_help_command(bot, args, user):
     if args == []:
         msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
-        msg_send(bot.irc, bot.channel, "Available commands: dice, echo, help, kill, me, pull, reboot, set, show, thread")
+        msg_send(bot.irc, bot.channel, "Available commands: dice, echo, help, kill, me, pull, quiz, reboot, set, show, thread")
         return
     if args[0] == "dice":
         msg_send(bot.irc, bot.channel, "dice [size (optional)] -- roll a dice with a certain size (default 10)")
@@ -370,6 +423,8 @@ def execute_help_command(bot, args, user):
         msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
     if args[0] == "pull":
         msg_send(bot.irc, bot.channel, "pull -- pull the latest changes from git (channel op only)")
+    if args[0] == "quiz":
+        msg_send(bot.irc, bot.channel, "quiz [file] [number (optional)] -- start a locally stored quiz with the bot with an optional number of questions (default 10)")
     if args[0] == "reboot":
         msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
     if args[0] == "set":
@@ -401,6 +456,28 @@ def execute_pull_command(bot, args, user):
         return
     msg_send(bot.irc, bot.channel, "Pulling the latest changes from git")
     os.system("git pull")
+
+def execute_quiz_command(bot, args, user):
+    if args == []:
+        return
+    if len(args) > 1 and args[1].isdigit():
+        size = int(args[1].isdigit())
+    else:
+        size = 10
+    quiz_file = args[0] + ".json"
+    if os.path.isfile(quiz_file):
+        with open(quiz_file) as f:
+            bot.state["quiz"] = json.load(f)
+        if size > len(bot.state["quiz"]):
+            size = len(bot.state["quiz"])
+        msg_send(bot.irc, bot.channel, "Starting quiz " + args[0] + ".")
+        quiz_new_question(bot)
+        bot.state["quiz_iterator"] = size
+        bot.state["quiz_state"] = True
+        bot.state["sleep_interval"] = 10
+        bot.state["wakeup_time"] = time.time() + bot.state["sleep_interval"]
+    else:
+        msg_send(bot.irc, bot.channel, quiz_file + " was not found!")
 
 def execute_reboot_command(bot, args, user):
     if is_op(bot, user):
@@ -587,6 +664,33 @@ def only_numbers(string):
         if not i.isdigit():
             return False
     return True
+
+def quiz_display_hint(bot):
+    answer = bot.state["quiz_current"]["answer"]
+    hint = bot.state["quiz_current"]["hint"]
+    hint_level = bot.state["quiz_current"]["hint_level"]
+    visible_chance = (hint_level + 1) * 0.1
+    for i in range(len(hint)):
+        chance = random.randint(1, 100) / 100
+        if hint[i] == "*" and chance < visible_chance:
+            hint = hint[:i] + answer[i] + hint[i+1:]
+    bot.state["quiz_current"]["hint"] = hint
+    msg_send(bot.irc, bot.channel, "Hint: "+hint)
+
+def quiz_new_question(bot):
+    item = random.choice(list(bot.state["quiz"].items()))
+    del bot.state["quiz"][item[0]]
+    bot.state["quiz_iterator"] -= 1
+    bot.state["quiz_current"]["question"] = item[0]
+    bot.state["quiz_current"]["answer"] = item[1]
+    bot.state["quiz_current"]["hint"] = ""
+    for i in range(len(bot.state["quiz_current"]["answer"])):
+        if bot.state["quiz_current"]["answer"][i] == " ":
+            bot.state["quiz_current"]["hint"] += " "
+        else:
+            bot.state["quiz_current"]["hint"] += "*"
+    bot.state["quiz_current"]["hint_level"] = 0
+    msg_send(bot.irc, bot.channel, bot.state["quiz_current"]["question"])
 
 def reply_pong(irc, text):
     for i in range(len(text.split())):
