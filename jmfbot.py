@@ -49,8 +49,6 @@ class irc_bot():
         "reboot" : False,
         "sleep_interval" : 60,
         "ssl" : True,
-        "timeout" : 0,
-        "timestamp" : 0,
         "wakeup_time": 0
     }
 
@@ -146,7 +144,7 @@ def main():
                     init["fully_started"] = True
 
         if bot.state["kill"]:
-            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+            if time.time() >= bot.state["wakeup_time"]:
                 bot.state["kill"] = False
                 with open("bot_state.txt", "w") as json_file:
                     json.dump(bot.state, json_file)
@@ -176,7 +174,7 @@ def main():
                 quiz_display_hint(bot)
 
         if bot.state["reboot"]:
-            if time.time() >= bot.state["timestamp"] + bot.state["timeout"]:
+            if time.time() >= bot.state["wakeup_time"]:
                 bot.state["reboot"] = False
                 with open("bot_state.txt", "w") as json_file:
                     json.dump(bot.state, json_file)
@@ -437,8 +435,7 @@ def execute_help_command(bot, args, user):
 def execute_kill_command(bot, args, user):
     if is_op(bot, user):
         if args != [] and only_numbers(args[0]):
-            bot.state["timestamp"] = time.time()
-            bot.state["timeout"] = int(args[0])
+            bot.state["wakeup_time"] = time.time() + int(args[0])
             msg_send(bot.irc, bot.channel, "Dying in "+args[0]+" seconds")
         elif args != [] and not only_numbers(args[0]):
             msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
@@ -482,8 +479,7 @@ def execute_quiz_command(bot, args, user):
 def execute_reboot_command(bot, args, user):
     if is_op(bot, user):
         if args != [] and only_numbers(args[0]):
-            bot.state["timestamp"] = time.time()
-            bot.state["timeout"] = int(args[0])
+            bot.state["wakeup_time"] = time.time() + int(args[0])
             msg_send(bot.irc, bot.channel, "Rebooting in "+args[0]+" seconds")
         elif args != [] and not only_numbers(args[0]):
             msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
