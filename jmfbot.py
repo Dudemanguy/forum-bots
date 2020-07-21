@@ -272,17 +272,8 @@ def check_for_quiz_answer(bot, user, text):
             bot.state["quiz_score"][user] += 1
         else:
             bot.state["quiz_score"][user] = 1
-        if bot.state["quiz_iterator"] == 0:
-            bot.state["quiz_state"] = False
-            bot.state["sleep_interval"] = 60
-            if bot.state["quiz_score"] == {}:
-                msg_send(bot.irc, bot.channel, "Quiz finished. Wow, no one won. You guys suck.")
-            else:
-                winner = max(bot.state["quiz_score"], key=bot.state["quiz_score"].get)
-                score = bot.state["quiz_score"][winner]
-                msg_send(bot.irc, bot.channel, "Quiz finished. Winner is " + winner + " with a score of " + str(score) + ".")
-        else:
-            quiz_new_question(bot)
+        bot.state["quiz_current"]["hint_level"] = 3
+        bot.state["wakeup_time"] = time.time()
 
 def check_for_user_entry(bot, user, text):
     if text.find(bot.channel) != -1:
@@ -464,7 +455,7 @@ def execute_quiz_command(bot, args, user):
     if args == []:
         return
     if len(args) > 1 and args[1].isdigit():
-        size = int(args[1].isdigit())
+        size = int(args[1])
     else:
         size = 10
     quiz_file = args[0] + ".json"
@@ -474,11 +465,11 @@ def execute_quiz_command(bot, args, user):
         if size > len(bot.state["quiz"]):
             size = len(bot.state["quiz"])
         msg_send(bot.irc, bot.channel, "Starting quiz " + args[0] + ".")
-        quiz_new_question(bot)
         bot.state["quiz_iterator"] = size
         bot.state["quiz_state"] = True
         bot.state["sleep_interval"] = 10
         bot.state["wakeup_time"] = time.time() + bot.state["sleep_interval"]
+        quiz_new_question(bot)
     else:
         msg_send(bot.irc, bot.channel, quiz_file + " was not found!")
 
