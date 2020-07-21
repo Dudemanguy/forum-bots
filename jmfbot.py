@@ -189,20 +189,14 @@ def check_for_bblquit(bot, user, text):
 def check_for_command(bot, user, text):
     if bot.state["op-only"] and not is_op(bot, user):
         return
-    raw = ""
+    command = ""
     if text.find("PRIVMSG "+bot.botnick) != -1:
-        raw = text.split(bot.botnick)[1][2:]
-        raw = "."+bot.botnick+" "+raw
+        command = text.split(bot.botnick)[1][2:]
+        command = "."+bot.botnick+" "+command
     elif text.find("."+bot.botnick) != -1:
-        raw = text.split(bot.channel)[1][2:]
-    if raw != "":
-        if raw == "."+bot.botnick:
-            execute_command(bot, ["help"], user)
-        else:
-            str_split = raw.split(None, 2)
-            if str_split[0] == "."+bot.botnick:
-                if len(str_split) > 1:
-                    execute_command(bot, str_split[1:], user)
+        command = text.split(bot.channel)[1][2:]
+    if command[0:7] == "."+bot.botnick:
+        execute_command(bot, command[8:], user)
 
 def check_for_jambo(bot, user, text):
     if text.find(bot.channel) != -1 and user == "djindy":
@@ -313,136 +307,174 @@ def check_text(bot, init, text):
             check_for_url(bot, user, text)
             check_for_jambo(bot, user, text)
 
-def execute_command(bot, str_split, user):
-    command = str_split[0]
-    arguments = ""
-    if len(str_split) > 1:
-        arguments = str_split[1]
-    if command == "dice":
-        if arguments == "":
-            size = 10
-        elif arguments.isdigit():
-            size = int(arguments)
-        else:
-            return
-        roll = random.randint(1, size)
-        msg_send(bot.irc, bot.channel, str(roll))
-    elif command == "echo" and arguments != "":
-        msg_send(bot.irc, bot.channel, arguments)
-    elif command == "help" and arguments == "":
+def execute_command(bot, command, user):
+    if command[0:4] == "dice":
+        args = command.split()[1:]
+        execute_dice_command(bot, args, user)
+    elif command[0:4] == "echo":
+        args = command.split(None, 1)[1]
+        execute_echo_command(bot, args, user)
+    elif command[0:4] == "help" or command == "":
+        args = command.split()[1:]
+        execute_help_command(bot, args, user)
+    elif command[0:4] == "kill":
+        args = command.split()[1:]
+        execute_kill_command(bot, args, user)
+    elif command[0:2] == "me":
+        args = command.split(None, 1)[1]
+        execute_me_command(bot, args, user)
+    elif command[0:4] == "pull":
+        args = command.split()[1:]
+        execute_pull_command(bot, args, user)
+    elif command[0:6] == "reboot":
+        args = command.split()[1:]
+        execute_reboot_command(bot, args, user)
+    elif command[0:3] == "set":
+        args = command.split()[1:]
+        execute_set_command(bot, args, user)
+    elif command[0:4] == "show":
+        args = command.split()[1:]
+        execute_show_command(bot, args, user)
+    elif command[0:6] == "thread":
+        args = command.split()[1:]
+        execute_thread_command(bot, args, user)
+
+def execute_dice_command(bot, args, user):
+    if args == []:
+        size = 10
+    elif args[0].isdigit():
+        size = int(args[0])
+    else:
+        return
+    roll = random.randint(1, size)
+    msg_send(bot.irc, bot.channel, str(roll))
+
+def execute_echo_command(bot, args, user):
+    msg_send(bot.irc, bot.channel, args)
+
+def execute_help_command(bot, args, user):
+    if args == []:
         msg_send(bot.irc, bot.channel, "Usage: execute the bot with either ."+bot.botnick+" or /msg "+bot.botnick+" followed by [command] [arguments]")
         msg_send(bot.irc, bot.channel, "Try '[execute] help [command]' for more details about a particular command")
         msg_send(bot.irc, bot.channel, "Available commands: dice, echo, help, kill, me, pull, reboot, set, show, thread")
-    elif command == "help" and arguments != "":
-        if arguments == "dice":
-            msg_send(bot.irc, bot.channel, "dice [size (optional)] -- roll a dice with a certain size (default 10)")
-        if arguments == "echo":
-            msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
-        if arguments == "help":
-            msg_send(bot.irc, bot.channel, "help [command (optional)] -- display detailed help output for a particular command")
-        if arguments == "kill":
-            msg_send(bot.irc, bot.channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
-        if arguments == "me":
-            msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
-        if arguments == "pull":
-            msg_send(bot.irc, bot.channel, "pull -- pull the latest changes from git (channel op only)")
-        if arguments == "reboot":
-            msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
-        if arguments == "set":
-            msg_send(bot.irc, bot.channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
-        if arguments == "show":
-            msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
-        if arguments == "thread":
-            msg_send(bot.irc, bot.channel, "thread [random/integer (optional)] -- get a random thread (default) or optionally specifiy one with an integer")
-    elif command == "kill":
-        if is_op(bot, user):
-            if arguments != "" and only_numbers(arguments):
-                bot.state["timestamp"] = time.time()
-                bot.state["timeout"] = int(arguments)
-                msg_send(bot.irc, bot.channel, "Dying in "+arguments+" seconds")
-            elif arguments != "" and not only_numbers(arguments):
-                msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
-                return
-            bot.state["kill"] = True
-        else:
-            msg_send(bot.irc, bot.channel, "Only channel ops can kill me.")
-    elif command == "me" and arguments != "":
-        msg_me(bot.irc, bot.channel, arguments)
-    elif command == "pull" and arguments == "":
-        if not is_op(bot, user):
-            msg_send(bot.irc, bot.channel, "Only channel ops can use the pull command.")
+        return
+    if args[0] == "dice":
+        msg_send(bot.irc, bot.channel, "dice [size (optional)] -- roll a dice with a certain size (default 10)")
+    if args[0] == "echo":
+        msg_send(bot.irc, bot.channel, "echo [message] -- tell the bot echo back a message")
+    if args[0] == "help":
+        msg_send(bot.irc, bot.channel, "help [command (optional)] -- display detailed help output for a particular command")
+    if args[0] == "kill":
+        msg_send(bot.irc, bot.channel, "kill [timeout (optional)] -- kill the bot with an optional timeout (channel op only)")
+    if args[0] == "me":
+        msg_send(bot.irc, bot.channel, "me [message] -- tell the bot to send a message with /me")
+    if args[0] == "pull":
+        msg_send(bot.irc, bot.channel, "pull -- pull the latest changes from git (channel op only)")
+    if args[0] == "reboot":
+        msg_send(bot.irc, bot.channel, "reboot [timeout (optional)] reboot the bot with an optional timeout (channel op only)")
+    if args[0] == "set":
+        msg_send(bot.irc, bot.channel, "set [property] [value] -- set one of the bot's properties to a particular value (channel op only)")
+    if args[0] == "show":
+        msg_send(bot.irc, bot.channel, "show [property] -- show the value of one of the bot's properties")
+    if args[0] == "thread":
+        msg_send(bot.irc, bot.channel, "thread [random/integer (optional)] -- get a random thread (default) or optionally specifiy one with an integer")
+
+def execute_kill_command(bot, args, user):
+    if is_op(bot, user):
+        if args != [] and only_numbers(args[0]):
+            bot.state["timestamp"] = time.time()
+            bot.state["timeout"] = int(args[0])
+            msg_send(bot.irc, bot.channel, "Dying in "+args[0]+" seconds")
+        elif args != [] and not only_numbers(args[0]):
+            msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
             return
-        msg_send(bot.irc, bot.channel, "Pulling the latest changes from git")
-        os.system("git pull")
-    elif command == "reboot":
-        if is_op(bot, user):
-            if arguments != "" and only_numbers(arguments):
-                bot.state["timestamp"] = time.time()
-                bot.state["timeout"] = int(arguments[0])
-                msg_send(bot.irc, bot.channel, "Rebooting in "+arguments[0]+" seconds")
-            elif arguments != "" and not only_numbers(arguments):
-                msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
-                return
-            bot.state["reboot"] = True
-        else:
-            msg_send(bot.irc, bot.channel, "Only channel ops can reboot me.")
-    elif command == "set" and arguments != "":
-        if not is_op(bot, user):
-            msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
+        bot.state["kill"] = True
+    else:
+        msg_send(bot.irc, bot.channel, "Only channel ops can kill me.")
+
+def execute_me_command(bot, args, user):
+    msg_me(bot.irc, bot.channel, args)
+
+def execute_pull_command(bot, args, user):
+    if not is_op(bot, user):
+        msg_send(bot.irc, bot.channel, "Only channel ops can use the pull command.")
+        return
+    msg_send(bot.irc, bot.channel, "Pulling the latest changes from git")
+    os.system("git pull")
+
+def execute_reboot_command(bot, args, user):
+    if is_op(bot, user):
+        if args != [] and only_numbers(args[0]):
+            bot.state["timestamp"] = time.time()
+            bot.state["timeout"] = int(args[0])
+            msg_send(bot.irc, bot.channel, "Rebooting in "+args[0]+" seconds")
+        elif args != [] and not only_numbers(args[0]):
+            msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
             return
-        arguments = arguments.split()
-        if arguments[0] == "greeter":
-            if arguments[1] == "on":
-                bot.state["greeter"] = True
-                msg_send(bot.irc, bot.channel, "User greeter turned on")
-            elif arguments[1] == "off":
-                bot.state["greeter"] = False
-                msg_send(bot.irc, bot.channel, "User greeter turned off")
-        elif arguments[0] == "op-only":
-            if arguments[1] == "on":
-                bot.state["op-only"] = True
-                msg_send(bot.irc, bot.channel, "Only listening to commands from channel ops")
-            elif arguments[1] == "off":
-                bot.state["op-only"] = False
-                msg_send(bot.irc, bot.channel, "Listening to commands from all users")
-        elif arguments[0] == "ragequits":
-            if only_numbers(arguments[1]):
-                bot.state["ragequits"] = int(arguments[1])
-                msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-            else:
-                msg_send(bot.irc, bot.channel, "Error: ragequits can only be set to an integer value")
-    elif command == "show":
-        if arguments == "":
-            msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
-            msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
-            msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
-        elif arguments == "greeter":
-            if bot.state["greeter"]:
-                msg_send(bot.irc, bot.channel, "User greeter turned on")
-            else:
-                msg_send(bot.irc, bot.channel, "User greeter turned off")
-        elif arguments == "op-only":
-            if bot.state["op-only"]:
-                msg_send(bot.irc, bot.channel, "op-only is turned on")
-            else:
-                msg_send(bot.irc, bot.channel, "op-only is turned off")
-        elif arguments == "ragequits":
-            msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
-    elif command == "thread":
-        thread_url = ""
-        thread_title = ""
-        if arguments.isdigit():
-            thread_url = bot.baseurl+arguments
+        bot.state["reboot"] = True
+    else:
+        msg_send(bot.irc, bot.channel, "Only channel ops can reboot me.")
+
+def execute_set_command(bot, args, user):
+    if not is_op(bot, user):
+        msg_send(bot.irc, bot.channel, "Only channel ops can use the set command.")
+        return
+    if args == []:
+        return
+    if args[0] == "greeter":
+        if args[1] == "on":
+            bot.state["greeter"] = True
+            msg_send(bot.irc, bot.channel, "User greeter turned on")
+        elif args[1] == "off":
+            bot.state["greeter"] = False
+            msg_send(bot.irc, bot.channel, "User greeter turned off")
+    elif args[0] == "op-only":
+        if args[1] == "on":
+            bot.state["op-only"] = True
+            msg_send(bot.irc, bot.channel, "Only listening to commands from channel ops")
+        elif args[1] == "off":
+            bot.state["op-only"] = False
+            msg_send(bot.irc, bot.channel, "Listening to commands from all users")
+    elif args[0] == "ragequits":
+        if only_numbers(args[1]):
+            bot.state["ragequits"] = int(args[1])
+            msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
+        else:
+            msg_send(bot.irc, bot.channel, "Error: ragequits can only be set to an integer value")
+
+def execute_show_command(bot, args, user):
+    if args == []:
+        msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
+        msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
+        msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
+    elif args[0] == "greeter":
+        if bot.state["greeter"]:
+            msg_send(bot.irc, bot.channel, "User greeter turned on")
+        else:
+            msg_send(bot.irc, bot.channel, "User greeter turned off")
+    elif args[0] == "op-only":
+        if bot.state["op-only"]:
+            msg_send(bot.irc, bot.channel, "op-only is turned on")
+        else:
+            msg_send(bot.irc, bot.channel, "op-only is turned off")
+    elif args[0] == "ragequits":
+        msg_send(bot.irc, bot.channel, "The ragequit counter is at "+str(bot.state["ragequits"]))
+
+def execute_thread_command(bot, args, user):
+    thread_url = ""
+    thread_title = ""
+    if args == [] or args[0] == "random":
+        # add this mysterious constant that exists for unknown reasons but whatever
+        thread_count = 4643
+        if thread_count > 0:
+            tid = random.randint(1, thread_count)
+            thread_url = bot.baseurl+str(tid)
             thread_title = get_thread_title(bot, thread_url)
-        elif arguments == "" or arguments == "random":
-            # add this mysterious constant that exists for unknown reasons but whatever
-            thread_count = 4643
-            if thread_count > 0:
-                tid = random.randint(1, thread_count)
-                thread_url = bot.baseurl+str(tid)
-                thread_title = get_thread_title(bot, thread_url)
-        if thread_title != "" and thread_url != "":
-            msg_send(bot.irc, bot.channel, thread_title+" -- "+thread_url)
+    elif args[0].isdigit():
+        thread_url = bot.baseurl+args[0]
+        thread_title = get_thread_title(bot, thread_url)
+    if thread_title != "" and thread_url != "":
+        msg_send(bot.irc, bot.channel, thread_title+" -- "+thread_url)
 
 def exists_in_old(item, old_full):
     for i in range(0, len(old_full)):
