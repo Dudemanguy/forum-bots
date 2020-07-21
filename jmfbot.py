@@ -444,6 +444,8 @@ def execute_kill_command(bot, args, user):
         elif args != [] and not only_numbers(args[0]):
             msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
             return
+        else:
+            bot.state["wakeup_time"] = time.time()
         bot.state["kill"] = True
     else:
         msg_send(bot.irc, bot.channel, "Only channel ops can kill me.")
@@ -488,6 +490,8 @@ def execute_reboot_command(bot, args, user):
         elif args != [] and not only_numbers(args[0]):
             msg_send(bot.irc, bot.channel, "Error: timeout must be an integer value")
             return
+        else:
+            bot.state["wakeup_time"] = time.time()
         bot.state["reboot"] = True
     else:
         msg_send(bot.irc, bot.channel, "Only channel ops can reboot me.")
