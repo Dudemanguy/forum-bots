@@ -160,7 +160,7 @@ def main():
             if time.time() >= bot.state["wakeup_time"]:
                 if bot.state["quiz_current"]["hint_level"] == 3:
                     msg_send(bot.irc, bot.channel, "The correct answer was " + bot.state["quiz_current"]["answer"] + ".")
-                    if bot.state["quiz_iterator"] > bot.state["quiz_size"]:
+                    if bot.state["quiz_iterator"] == bot.state["quiz_size"]:
                         bot.state["quiz_state"] = False
                         bot.state["sleep_interval"] = 60
                         if bot.state["quiz_score"] == {}:
