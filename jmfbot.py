@@ -148,7 +148,7 @@ def main():
             if time.time() >= bot.state["wakeup_time"]:
                 bot.state["kill"] = False
                 ragequits = open("bot_state.txt", "w")
-                ragequits.write(bot.state["ragequits"])
+                ragequits.write(str(bot.state["ragequits"]))
                 ragequits.close()
                 msg_send(bot.irc, bot.channel, "bbl")
                 bot.irc.setblocking(1)
