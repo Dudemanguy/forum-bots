@@ -665,7 +665,7 @@ def quiz_display_hint(bot):
     answer = bot.state["quiz_current"]["answer"]
     hint = bot.state["quiz_current"]["hint"]
     hint_level = bot.state["quiz_current"]["hint_level"]
-    visible_chance = (hint_level + 1) * 0.1
+    visible_chance = [0.05, 0.15, 0.25][hint_level - 1]
     for i in range(len(hint)):
         chance = random.randint(1, 100) / 100
         if hint[i] == "*" and chance < visible_chance:
