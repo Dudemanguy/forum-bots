@@ -44,6 +44,7 @@ class irc_bot():
         "quiz_iterator": 0,
         "quiz_questions": [],
         "quiz_score": {},
+        "quiz_size": 0,
         "quiz_state": False,
         "ragequits" : 0,
         "reboot" : False,
@@ -159,7 +160,7 @@ def main():
             if time.time() >= bot.state["wakeup_time"]:
                 if bot.state["quiz_current"]["hint_level"] == 3:
                     msg_send(bot.irc, bot.channel, "The correct answer was " + bot.state["quiz_current"]["answer"] + ".")
-                    if bot.state["quiz_iterator"] == 0:
+                    if bot.state["quiz_iterator"] > bot.state["quiz_size"]:
                         bot.state["quiz_state"] = False
                         bot.state["sleep_interval"] = 60
                         if bot.state["quiz_score"] == {}:
@@ -465,7 +466,7 @@ def execute_quiz_command(bot, args, user):
         if size > len(bot.state["quiz"]):
             size = len(bot.state["quiz"])
         msg_send(bot.irc, bot.channel, "Starting quiz " + args[0] + ".")
-        bot.state["quiz_iterator"] = size
+        bot.state["quiz_size"] = size
         bot.state["quiz_state"] = True
         bot.state["sleep_interval"] = 10
         bot.state["wakeup_time"] = time.time() + bot.state["sleep_interval"]
@@ -675,7 +676,7 @@ def quiz_display_hint(bot):
 def quiz_new_question(bot):
     item = random.choice(list(bot.state["quiz"].items()))
     del bot.state["quiz"][item[0]]
-    bot.state["quiz_iterator"] -= 1
+    bot.state["quiz_iterator"] += 1
     bot.state["quiz_current"]["question"] = item[0]
     bot.state["quiz_current"]["answer"] = item[1]
     bot.state["quiz_current"]["hint"] = ""
@@ -685,7 +686,7 @@ def quiz_new_question(bot):
         else:
             bot.state["quiz_current"]["hint"] += "*"
     bot.state["quiz_current"]["hint_level"] = 0
-    msg_send(bot.irc, bot.channel, bot.state["quiz_current"]["question"])
+    msg_send(bot.irc, bot.channel, str(bot.state["quiz_iterator"]) + ". " + bot.state["quiz_current"]["question"])
 
 def reply_pong(irc, text):
     for i in range(len(text.split())):
