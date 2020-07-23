@@ -461,7 +461,7 @@ def execute_quiz_command(bot, args, user):
     quiz_file = args[0] + ".json"
     if os.path.isfile(quiz_file):
         with open(quiz_file) as f:
-            bot.state["quiz"] = json.load(f)
+            bot.state["quiz"] = json.load(f, encoding="utf-8")
         if size > len(bot.state["quiz"]):
             size = len(bot.state["quiz"])
         msg_send(bot.irc, bot.channel, "Starting quiz " + args[0] + ".")
