@@ -88,7 +88,7 @@ def main():
 
     if os.path.isfile("bot_state.txt"):
         ragequits = open("bot_state.txt", "r").read().strip()
-        bot.state["ragequits"] = ragequits
+        bot.state["ragequits"] = int(ragequits)
 
     init = {
         "first_join" : True,
@@ -301,7 +301,7 @@ def check_for_user_exit(bot, user, text):
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
             ragequits = open("bot_state.txt", "w")
-            ragequits.write(bot.state["ragequits"])
+            ragequits.write(str(bot.state["ragequits"]))
             ragequits.close()
         if is_op(bot, user):
             if "@"+user in bot.names:
@@ -317,7 +317,7 @@ def check_for_user_exit(bot, user, text):
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
             ragequits = open("bot_state.txt", "w")
-            ragequits.write(bot.state["ragequits"])
+            ragequits.write(str(bot.state["ragequits"]))
             ragequits.close()
         if is_op(bot, user):
             if "@"+user in bot.names:
