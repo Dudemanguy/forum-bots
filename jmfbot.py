@@ -116,8 +116,6 @@ def main():
             timeout = (bot.state["wakeup_time"] - current_time)*1000
         bot.poller.poll(timeout)
         text = get_response(bot.irc)
-        if text != "":
-            print(text)
 
         check_text(bot, init, text)
 
@@ -696,7 +694,6 @@ def reply_pong(irc, text):
             irc.send(bytes('PONG '+text.split()[i+1]+'\r\n', "UTF-8"))
 
 def server_connect(irc, server, port, botnick):
-    print("Connecting to: " + server)
     irc.connect((server, port))
     irc.send(bytes("USER " + botnick + " " + botnick +" " + botnick + " :python\n", "UTF-8"))
     irc.send(bytes("NICK " + botnick + "\n", "UTF-8"))
