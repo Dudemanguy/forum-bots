@@ -36,6 +36,7 @@ class irc_bot():
 
     state = {
         "greeter" : True,
+        "greeter-blacklist" : "",
         "identify" : True,
         "kill" : False,
         "op-only": False,
@@ -87,8 +88,11 @@ def main():
         bot.port = 6697
 
     if os.path.isfile("bot_state.txt"):
-        ragequits = open("bot_state.txt", "r").read().strip()
-        bot.state["ragequits"] = int(ragequits)
+        f = open("bot_state.txt", "r")
+        lines = f.readlines()
+        bot.state["ragequits"] = int(lines[0].strip())
+        bot.state["greeter-blacklist"] = lines[1].strip()
+        f.close();
 
     init = {
         "first_join" : True,
@@ -145,9 +149,7 @@ def main():
         if bot.state["kill"]:
             if time.time() >= bot.state["wakeup_time"]:
                 bot.state["kill"] = False
-                ragequits = open("bot_state.txt", "w")
-                ragequits.write(str(bot.state["ragequits"]))
-                ragequits.close()
+                write_bot_state(bot)
                 msg_send(bot.irc, bot.channel, "bbl")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
@@ -176,9 +178,7 @@ def main():
         if bot.state["reboot"]:
             if time.time() >= bot.state["wakeup_time"]:
                 bot.state["reboot"] = False
-                ragequits = open("bot_state.txt", "w")
-                ragequits.write(bot.state["ragequits"])
-                ragequits.close()
+                write_bot_state(bot)
                 msg_send(bot.irc, bot.channel, "brb")
                 bot.irc.setblocking(1)
                 bot.irc.shutdown(0)
@@ -206,7 +206,7 @@ def channel_join(bot):
 def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[1][2:]
-        if substring == "bbl" and bot.state["greeter"]:
+        if substring == "bbl":
             chance = random.randint(1, 100)
             if chance > 55:
                 msg_send(bot.irc, bot.channel, "fuck off "+user)
@@ -284,7 +284,8 @@ def check_for_user_entry(bot, user, text):
         substring = text.split(bot.channel)[0]
         if substring.find("JOIN") != -1:
             bot.names.append(user)
-            if bot.state["greeter"] and user != bot.botnick:
+            blacklist = bot.state["greeter-blacklist"].split(",")
+            if bot.state["greeter"] and not user in blacklist:
                 msg_send(bot.irc, bot.channel, "hi "+user)
 
 def check_for_user_mode(bot, user, text):
@@ -303,9 +304,7 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-            ragequits = open("bot_state.txt", "w")
-            ragequits.write(str(bot.state["ragequits"]))
-            ragequits.close()
+            write_bot_state(bot)
         if is_op(bot, user):
             if "@"+user in bot.names:
                 bot.names.remove("@"+user)
@@ -319,9 +318,7 @@ def check_for_user_exit(bot, user, text):
         if user.lower() == "jeckidy":
             bot.state["ragequits"] += 1
             msg_send(bot.irc, bot.channel, "Ragequit counter updated to "+str(bot.state["ragequits"]))
-            ragequits = open("bot_state.txt", "w")
-            ragequits.write(str(bot.state["ragequits"]))
-            ragequits.close()
+            write_bot_state(bot)
         if is_op(bot, user):
             if "@"+user in bot.names:
                 bot.names.remove("@"+user)
@@ -504,6 +501,9 @@ def execute_set_command(bot, args, user):
         elif args[1] == "off":
             bot.state["greeter"] = False
             msg_send(bot.irc, bot.channel, "User greeter turned off")
+    if args[0] == "greeter-blacklist" and len(args) == 2:
+        bot.state["greeter-blacklist"] = args[1]
+        msg_send(bot.irc, bot.channel, "User greeter blacklist set to '" + bot.state["greeter-blacklist"] + "'.")
     elif args[0] == "op-only":
         if args[1] == "on":
             bot.state["op-only"] = True
@@ -521,6 +521,7 @@ def execute_set_command(bot, args, user):
 def execute_show_command(bot, args, user):
     if args == []:
         msg_send(bot.irc, bot.channel, "greeter -- greet users on entry (boolean: on/off)")
+        msg_send(bot.irc, bot.channel, "greeter-blacklist -- exclude users from greeter (string: user1,user2,user3...)")
         msg_send(bot.irc, bot.channel, "op-only -- only listen to commands from channel ops (boolean: on/off)")
         msg_send(bot.irc, bot.channel, "ragequits -- ragequit counter (integer)")
     elif args[0] == "greeter":
@@ -528,6 +529,8 @@ def execute_show_command(bot, args, user):
             msg_send(bot.irc, bot.channel, "User greeter turned on")
         else:
             msg_send(bot.irc, bot.channel, "User greeter turned off")
+    elif args[0] == "greeter-blacklist":
+        msg_send(bot.irc, bot.channel, "The greeter blacklist is '" + bot.state["greeter-blacklist"]+"'.")
     elif args[0] == "op-only":
         if bot.state["op-only"]:
             msg_send(bot.irc, bot.channel, "op-only is turned on")
@@ -725,6 +728,12 @@ def update_info(bot, soup):
     for i in range(len(poster)):
         full.append([poster[i], thread[i], time[i], url[i]])
     return full
+
+def write_bot_state(bot):
+    f = open("bot_state.txt", "w")
+    f.write(str(bot.state["ragequits"])+"\n")
+    f.write(bot.state["greeter-blacklist"]+"\n")
+    f.close()
 
 if __name__ == "__main__":
     main()
