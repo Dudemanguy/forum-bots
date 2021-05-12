@@ -242,9 +242,9 @@ def check_for_url(bot, user, text):
                 if substring.find("http") == -1:
                     substring = "https://"+substring
                 if substring.find("mobile.twitter.com") != -1:
-                    substring = substring.replace("mobile.twitter.com", "nitter.42l.fr")
+                    substring = substring.replace("mobile.twitter.com", "nitter.domain.glass")
                 elif substring.find("twitter.com") != -1:
-                    substring = substring.replace("twitter.com", "nitter.42l.fr")
+                    substring = substring.replace("twitter.com", "nitter.domain.glass")
                 if substring.find("m.youtube.com") != -1:
                     substring = substring.replace("m.youtube.com", "invidious.snopyta.org")
                     substring = substring.replace("www.", "")
