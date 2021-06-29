@@ -246,13 +246,13 @@ def check_for_url(bot, user, text):
                 elif substring.find("twitter.com") != -1:
                     substring = substring.replace("twitter.com", "nitter.pussthecat.org")
                 if substring.find("m.youtube.com") != -1:
-                    substring = substring.replace("m.youtube.com", "invidious.snopyta.org")
+                    substring = substring.replace("m.youtube.com", "yewtu.be")
                     substring = substring.replace("www.", "")
                 elif substring.find("youtube.com") != -1:
-                    substring = substring.replace("youtube.com", "invidious.snopyta.org")
+                    substring = substring.replace("youtube.com", "yewtu.be")
                     substring = substring.replace("www.", "")
                 elif substring.find("youtu.be") != -1:
-                    substring = substring.replace("youtu.be", "invidious.snopyta.org")
+                    substring = substring.replace("youtu.be", "yewtu.be")
                     substring = substring.replace("www.", "")
                 soup = get_html_requests(bot, substring)
                 if soup == -1:
