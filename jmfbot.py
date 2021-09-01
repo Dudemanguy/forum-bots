@@ -257,7 +257,7 @@ def check_for_url(bot, user, text):
                 soup = get_html_requests(bot, substring)
                 if soup == -1:
                     continue
-                if soup.find("title").contents:
+                if soup.find("title") and soup.find("title").contents:
                     msg_send(bot.irc, bot.channel, "[Title] "+soup.find("title").contents[0].strip())
 
 def check_for_nick_change(bot, user, text):
