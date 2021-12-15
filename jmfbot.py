@@ -103,7 +103,10 @@ def main():
     old_full = []
     bot.irc = socket.socket()
     if bot.state["ssl"]:
-        bot.irc = ssl.wrap_socket(bot.irc)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.load_default_certs()
+        bot.irc = context.wrap_socket(bot.irc)
     server_connect(bot.irc, bot.server, bot.port, bot.botnick)
 
     bot.poller = select.poll()
