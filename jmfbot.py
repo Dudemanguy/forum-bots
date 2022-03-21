@@ -209,7 +209,7 @@ def channel_join(bot):
 def check_for_bblquit(bot, user, text):
     if text.find(bot.channel) != -1:
         substring = text.split(bot.channel)[1][2:]
-        if substring == "bbl":
+        if substring.lower() == "bbl":
             chance = random.randint(1, 100)
             if chance > 55:
                 msg_send(bot.irc, bot.channel, "fuck off "+user)
