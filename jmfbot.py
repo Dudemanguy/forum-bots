@@ -70,7 +70,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--botnick", type=str, default="jmfbot", nargs='?', const=1, help="bot nickname")
     parser.add_argument("--botpass", type=str, default= "", nargs='?', const=1, help="bot password")
-    parser.add_argument("--channel", type=str, default=["#jpmetal","#revelationofdoom"], nargs='?', const=1, help="channel to join")
+    parser.add_argument("--channel", type=str, default=["#forcesofsteel","#jpmetal","#revelationofdoom"], nargs='?', const=1, help="channel to join")
     parser.add_argument("--identify", type=int, default=1, help="identify name to server")
     parser.add_argument("--server", type=str, default="irc.rizon.net", nargs='?', const=1, help="server to use")
     parser.add_argument("--ssl", type=int, default=1, help="use ssl")
