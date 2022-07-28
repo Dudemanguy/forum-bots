@@ -138,7 +138,7 @@ def main():
         if not initialized and text.find(":") != -1:
             check_names_response(bot, text)
 
-        if not initialized and text.find('+v') != -1:
+        if len(bot.names) == len(bot.channel):
             initialized = True
 
         if text[:4] == "PING":
