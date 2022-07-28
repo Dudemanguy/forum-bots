@@ -593,8 +593,8 @@ def is_op(bot, message):
     return False
 
 def is_voice(bot, message):
-    for i in bot.names[message.channel]:
-        if i[0] == "+" and message == i[1:]:
+    for name in bot.names[message.channel]:
+        if name[0] == "+" and message.user == name[1:]:
             return True
     return False
 
@@ -741,12 +741,18 @@ def user_quit(bot, message):
                 bot.names[channel].remove(name)
 
 def user_mode(bot, message):
+    if is_op(bot, message):
+        name = "@" + message.user
+    elif is_voice(bot, message):
+        name = "+" + message.user
+    else:
+        name = message.user
     if message.mode == "+v":
-        bot.names[message.channel].remove(message.user)
-        bot.names[message.channel].append("+"+message.user)
+        bot.names[message.channel].remove(name)
+        bot.names[message.channel].append("+" + message.user)
     if message.mode == "+o":
-        bot.names[message.channel].remove(message.user)
-        bot.names[message.channel].append("@"+message.user)
+        bot.names[message.channel].remove(name)
+        bot.names[message.channel].append("@" + message.user)
 
 def write_bot_state(bot):
     f = open("bot_state.txt", "w")
