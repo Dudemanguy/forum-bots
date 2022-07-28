@@ -712,6 +712,8 @@ def update_info(bot, soup):
     return full
 
 def user_entry(bot, message):
+    if message.user == bot.botnick:
+        return
     bot.names[message.channel].append(message.user)
     blacklist = bot.state["greeter-blacklist"].split(",")
     if bot.state["greeter"] and not message.user in blacklist:
