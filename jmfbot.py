@@ -642,11 +642,11 @@ def nick_change(bot, message):
     for channel in bot.channel:
         for name in bot.names[channel]:
             if name == message.user:
-                bot.names[bot.channel].remove(name)
-                bot.names[bot.channel].append(message.nickchange)
+                bot.names[channel].remove(name)
+                bot.names[channel].append(message.nickchange)
             if name[1:] == message.user:
-                bot.names[bot.channel].remove(name)
-                bot.names[bot.channel].append(name[1] + message.nickchange)
+                bot.names[channel].remove(name)
+                bot.names[channel].append(name[1] + message.nickchange)
 
 def only_numbers(string):
     for i in string:
