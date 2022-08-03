@@ -35,7 +35,7 @@ class irc_bot():
     poller = ""
 
     state = {
-        "greeter" : True,
+        "greeter" : False,
         "greeter-blacklist" : "",
         "identify" : True,
         "kill" : False,
