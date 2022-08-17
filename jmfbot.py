@@ -133,10 +133,12 @@ def main():
 
         if not initialized and text.find("please choose a different nick") != -1:
             identify_name(bot)
-            channel_join(bot)
 
         if not initialized and text.find(":") != -1:
             check_names_response(bot, text)
+
+        if not initialized and text.find("you are now recognized") != -1:
+            channel_join(bot)
 
         if len(bot.names) == len(bot.channel):
             initialized = True
