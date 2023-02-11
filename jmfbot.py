@@ -254,9 +254,9 @@ def check_for_url(bot, message):
                 if substring.find("http") == -1:
                     substring = "https://"+substring
                 if substring.find("mobile.twitter.com") != -1:
-                    substring = substring.replace("mobile.twitter.com", "nitter.pussthecat.org")
+                    substring = substring.replace("mobile.twitter.com", "nitter.moomoo.me")
                 elif substring.find("twitter.com") != -1:
-                    substring = substring.replace("twitter.com", "nitter.pussthecat.org")
+                    substring = substring.replace("twitter.com", "nitter.moomoo.me")
                 if substring.find("m.youtube.com") != -1:
                     substring = substring.replace("m.youtube.com", "yewtu.be")
                     substring = substring.replace("www.", "")
