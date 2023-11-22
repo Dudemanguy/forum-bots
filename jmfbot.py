@@ -553,7 +553,7 @@ def get_html_requests(bot, url):
         headers = {
                 "User-Agent": "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
         }
-        html = requests.get(url, headers=headers).content.decode("UTF-8")
+        html = requests.get(url, headers=headers, timeout=10).content.decode("UTF-8")
         soup = BeautifulSoup(html, "html.parser")
         return soup
     except:
