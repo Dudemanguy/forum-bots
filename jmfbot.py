@@ -253,10 +253,6 @@ def check_for_url(bot, message):
             if substring.find("http") != -1 or re.search("www", substring):
                 if substring.find("http") == -1:
                     substring = "https://"+substring
-                if substring.find("mobile.twitter.com") != -1:
-                    substring = substring.replace("mobile.twitter.com", "nitter.moomoo.me")
-                elif substring.find("twitter.com") != -1:
-                    substring = substring.replace("twitter.com", "nitter.moomoo.me")
                 if substring.find("m.youtube.com") != -1:
                     substring = substring.replace("m.youtube.com", "yewtu.be")
                     substring = substring.replace("www.", "")
@@ -266,7 +262,10 @@ def check_for_url(bot, message):
                 elif substring.find("youtu.be") != -1:
                     substring = substring.replace("youtu.be", "yewtu.be")
                     substring = substring.replace("www.", "")
-                soup = get_html_requests(bot, substring)
+                if substring.find("twitter.com") != -1:
+                    soup = get_html_mechanize(bot, substring)
+                else:
+                    soup = get_html_requests(bot, substring)
                 if soup == -1:
                     continue
                 if soup.find("title") and soup.find("title").contents:
@@ -551,7 +550,7 @@ def get_html_mechanize(bot, url):
 def get_html_requests(bot, url):
     try:
         headers = {
-                "User-Agent": "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
+                "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
         }
         html = requests.get(url, headers=headers, timeout=10).content.decode("UTF-8")
         soup = BeautifulSoup(html, "html.parser")
