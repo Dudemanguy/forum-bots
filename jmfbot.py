@@ -33,6 +33,7 @@ class irc_bot():
 
     irc = ""
     poller = ""
+    last_ping = 0
 
     state = {
         "greeter" : False,
@@ -129,7 +130,7 @@ def main():
         if current_time < bot.state["wakeup_time"]:
             timeout = (bot.state["wakeup_time"] - current_time)*1000
         bot.poller.poll(timeout)
-        text = get_response(bot.irc)
+        text = get_response(bot)
 
         if not initialized and text.find("please choose a different nick") != -1:
             identify_name(bot)
@@ -198,7 +199,9 @@ def main():
                 bot.irc.close()
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
-        if time.time() >= bot.state["wakeup_time"]:
+        if current_time >= bot.state["wakeup_time"]:
+            if current_time >= 60 * 5 + bot.last_ping:
+                bot.state["reboot"] = True
             soup = get_html_mechanize(bot, bot.searchurl)
             if soup == -1:
                 continue
@@ -223,7 +226,6 @@ def bblquit(bot, message):
 def channel_join(bot):
     for channel in bot.channel:
         bot.irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
-        msg_send(bot.irc, channel, "hi")
 
 def check_names_response(bot, text):
     if len(text.split(":")) < 3:
@@ -563,9 +565,10 @@ def get_names(bot, text):
     channel = str_split[4]
     bot.names[channel] = str_split[5:]
 
-def get_response(irc):
+def get_response(bot):
     try:
-        resp = irc.recv(4096).decode("UTF-8").rstrip("\r\n")
+        resp = bot.irc.recv(4096).decode("UTF-8").rstrip("\r\n")
+        bot.last_ping = time.time()
         return resp
     except:
         return ""
