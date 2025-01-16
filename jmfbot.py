@@ -619,15 +619,18 @@ def mechanize_login(bot):
     bot.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
     bot.br.addheaders = [("User-agent", "Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0")]
 
-    bot.br.open(bot.loginurl)
-    bot.br.select_form(nr=1)
-    if bot.botpass == "":
-        bot.br.form["username"] = input("Username: ")
-        bot.br.form["password"] = getpass.getpass("Password: ")
-        bot.botpass = bot.br.form['password']
-    else:
-        bot.br.form["username"] = bot.botnick
-        bot.br.form["password"] = bot.botpass
+    try:
+        bot.br.open(bot.loginurl)
+        bot.br.select_form(nr=1)
+        if bot.botpass == "":
+            bot.br.form["username"] = input("Username: ")
+            bot.br.form["password"] = getpass.getpass("Password: ")
+            bot.botpass = bot.br.form['password']
+        else:
+            bot.br.form["username"] = bot.botnick
+            bot.br.form["password"] = bot.botpass
+    except:
+        mechanize_login(bot)
     return bot.br,bot.botpass
 
 def msg_me(irc, channel, msg):
