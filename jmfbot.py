@@ -27,13 +27,13 @@ class irc_bot():
     br = ""
     channel = ""
     names = {}
+    pong_domain = ""
     port = ""
     server = ""
     ssl = ""
 
     irc = ""
     poller = ""
-    last_ping = 0
 
     state = {
         "greeter" : False,
@@ -128,7 +128,7 @@ def main():
     while True:
         current_time = time.time()
         if current_time < bot.state["wakeup_time"]:
-            timeout = (bot.state["wakeup_time"] - current_time)*1000
+            timeout = (bot.state["wakeup_time"] - current_time) * 1000
         bot.poller.poll(timeout)
         text = get_response(bot)
 
@@ -146,8 +146,8 @@ def main():
 
         if text[:4] == "PING":
             pong_domain = text.split(":")[1]
+            bot.pong_domain = pong_domain
             bot.irc.send(bytes('PONG ' + pong_domain + '\r\n', "UTF-8"))
-            continue
 
         message = irc_message()
 
@@ -193,15 +193,21 @@ def main():
             if time.time() >= bot.state["wakeup_time"]:
                 bot.state["reboot"] = False
                 write_bot_state(bot)
-                msg_send(bot.irc, bot.channel, "brb")
-                bot.irc.setblocking(1)
-                bot.irc.shutdown(0)
+                try:
+                    msg_send(bot.irc, bot.channel, "brb")
+                    bot.irc.setblocking(1)
+                    bot.irc.shutdown(0)
+                except:
+                    pass
                 bot.irc.close()
                 os.execl("jmfbot.py", "--botnick="+bot.botnick, "--botpass="+bot.botpass)
 
         if current_time >= bot.state["wakeup_time"]:
-            if current_time >= 60 * 5 + bot.last_ping:
+            try:
+                bot.irc.send(bytes('PONG ' + bot.pong_domain + '\r\n', "UTF-8"))
+            except:
                 bot.state["reboot"] = True
+                continue
             soup = get_html_mechanize(bot, bot.searchurl)
             if soup == -1:
                 continue
@@ -568,7 +574,6 @@ def get_names(bot, text):
 def get_response(bot):
     try:
         resp = bot.irc.recv(4096).decode("UTF-8").rstrip("\r\n")
-        bot.last_ping = time.time()
         return resp
     except:
         return ""
