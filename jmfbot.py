@@ -262,13 +262,13 @@ def check_for_url(bot, message):
                 if substring.find("http") == -1:
                     substring = "https://"+substring
                 if substring.find("m.youtube.com") != -1:
-                    substring = substring.replace("m.youtube.com", "yewtu.be")
+                    substring = substring.replace("m.youtube.com", "inv.nadeko.net")
                     substring = substring.replace("www.", "")
                 elif substring.find("youtube.com") != -1:
-                    substring = substring.replace("youtube.com", "yewtu.be")
+                    substring = substring.replace("youtube.com", "inv.nadeko.net")
                     substring = substring.replace("www.", "")
                 elif substring.find("youtu.be") != -1:
-                    substring = substring.replace("youtu.be", "yewtu.be")
+                    substring = substring.replace("youtu.be", "inv.nadeko.net")
                     substring = substring.replace("www.", "")
                 if substring.find("twitter.com") != -1:
                     soup = get_html_mechanize(bot, substring)
