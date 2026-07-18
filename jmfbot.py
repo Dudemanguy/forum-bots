@@ -222,13 +222,6 @@ def main():
 
     return 0
 
-def bblquit(bot, message):
-    chance = random.randint(1, 100)
-    if chance > 55:
-        msg_send(bot.irc, message.channel, "fuck off "+message.user)
-    else:
-        msg_send(bot.irc, message.channel, "bbl "+message.user)
-
 def channel_join(bot):
     for channel in bot.channel:
         bot.irc.send(bytes("JOIN " + channel + "\n", "UTF-8"))
@@ -240,6 +233,26 @@ def check_names_response(bot, text):
     for channel in bot.channel:
         if server_text.find(bot.botnick + " @ " + channel) != -1 or server_text.find(bot.botnick + " * " + channel) != -1:
             bot.names[channel] = text.split(":")[2].split()
+
+def check_for_bblquit(bot, message):
+    text = " ".join(message.text)
+    if not "bbl" in text:
+        return
+
+    chance = random.randint(1, 100)
+    if chance > 55:
+        msg_send(bot.irc, message.channel, "fuck off "+message.user)
+    else:
+        msg_send(bot.irc, message.channel, "bbl "+message.user)
+
+def check_for_jambo(bot, message):
+    text = " ".join(message.text)
+    if "jambo" != text:
+        return
+
+    if message.user == "djindy":
+        msg_send(bot.irc, message.channel, "mambo")
+
 
 def check_for_quiz_answer(bot, message):
     if not bot.state["quiz_state"]:
@@ -332,13 +345,8 @@ def create_message(bot, message, text):
     message.trigger_action = True
 
 def execute_action(bot, message):
-    match message.text[0].lower():
-        case "bbl":
-            bblquit(bot, message)
-            return
-        case "jambo":
-            jambo(bot, message)
-            return
+    check_for_bblquit(bot, message)
+    check_for_jambo(bot, message)
     check_for_quiz_answer(bot, message)
     check_for_url(bot, message)
 
@@ -606,10 +614,6 @@ def is_voice(bot, message):
         if name[0] == "+" and message.user == name[1:]:
             return True
     return False
-
-def jambo(bot, message):
-    if message.user == "djindy":
-        msg_send(bot.irc, message.channel, "mambo")
 
 def mechanize_login(bot):
     cj = http.cookiejar.CookieJar()
